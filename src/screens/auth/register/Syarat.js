@@ -3,11 +3,26 @@ import { View, Text, Image, StyleSheet, TouchableOpacity, TextInput, Alert } fro
 import Logo from '../../../assets/images/logo_posyandu.png';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { launchImageLibrary } from 'react-native-image-picker';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 const Syarat = () => {
-  const [selectedImage, setSelectedImage] = useState(null);
-
+  const [foto_kk, setFotoKK] = useState(null);
+  const [no_ktp, setNoKtp] = useState('');
+  const [no_kk, setNoKk] = useState('');
   const navigation = useNavigation();
+  const route = useRoute();
+  const { no_hp, nama, kata_sandi } = route.params;
+
+  const handleNext = () => {
+    // Pass all data to the FormulirScreen
+    navigation.navigate('FormulirScreen', {
+      no_hp,
+      nama,
+      kata_sandi,
+      no_ktp: no_ktp,
+      no_kk: no_kk,
+      foto_kk: foto_kk,
+    });
+  };
 
   const handleImagePick = () => {
     launchImageLibrary(
@@ -32,7 +47,7 @@ const Syarat = () => {
           } else if (!fileType.startsWith('image/')) {
             Alert.alert('Format file tidak didukung', 'Hanya file gambar yang diizinkan');
           } else {
-            setSelectedImage(imageUri);
+            setFotoKK(imageUri);
           }
         }
       }
@@ -55,13 +70,17 @@ const Syarat = () => {
           placeholderTextColor={'#000000'}
           style={styles.input}
           keyboardType="numeric"
+          value={no_ktp}
+          onChangeText={setNoKtp}
           maxLength={16}
         />
         <TextInput
           placeholder="Masukan No Kartu Keluarga"
           placeholderTextColor={'#000000'}
           style={styles.input}
+          onChangeText={setNoKk}
           keyboardType="numeric"
+          value={no_kk}
           maxLength={16}
         />
 
@@ -69,8 +88,8 @@ const Syarat = () => {
           <Text style={styles.CardText}>Upload Kartu Keluarga</Text>
           <Text style={styles.SubCartText}>Upload Foto Kartu Keluarga</Text>
           <TouchableOpacity style={styles.CardImageDisplay} onPress={handleImagePick}>
-            {selectedImage ? (
-              <Image source={{ uri: selectedImage }} style={styles.imagePreview} />
+            {foto_kk ? (
+              <Image source={{ uri: foto_kk }} style={styles.imagePreview} />
             ) : (
               <>
                 <Icon name="image-area" size={50} color="#DFE4EB" />
@@ -81,7 +100,7 @@ const Syarat = () => {
         </View>
       </View>
       <View style={styles.btnContainer}>
-        <TouchableOpacity onPress={() => navigation.navigate('FormulirScreen')} style={styles.btnUpload}>
+        <TouchableOpacity onPress={handleNext} style={styles.btnUpload}>
           <Text style={styles.btnText}>Lanjut</Text>
         </TouchableOpacity>
       </View>

@@ -8,6 +8,16 @@ const Index = () => {
   const navigation = useNavigation();
   const [passwordVisible, setPasswordVisible] = useState(false);
 
+  const [no_hp, setNoHp] = useState('');
+  const [nama, setNama] = useState('');
+  const [kata_sandi, setKataSandi] = useState('');
+
+  const handleRegister = () => {
+    // Pass data to Syarat screen
+    navigation.navigate('Syarat', { no_hp: no_hp, nama: nama, kata_sandi: kata_sandi });
+  };
+
+
   return (
     <View style={styles.container}>
       <View style={styles.logoContainer}>
@@ -21,12 +31,16 @@ const Index = () => {
           placeholderTextColor={'#000000'}
           style={styles.input}
           keyboardType='numeric'
+          value={no_hp}
+          onChangeText={(text) => setNoHp(text)}
           maxLength={13}
         />
         <TextInput
           placeholder="Nama Pengguna"
           placeholderTextColor={'#000000'}
           style={styles.input}
+          value={nama}
+          onChangeText={(text) => setNama(text)}
         />
         <View style={styles.passwordContainer}>
           <TextInput
@@ -34,6 +48,8 @@ const Index = () => {
             placeholderTextColor={'#000000'}
             secureTextEntry={!passwordVisible}
             style={styles.inputPassword}
+            value={kata_sandi}
+            onChangeText={(text) => setKataSandi(text)}
           />
           <TouchableOpacity onPress={() => setPasswordVisible(!passwordVisible)}>
             <MaterialCommunityIcons
@@ -44,7 +60,7 @@ const Index = () => {
           </TouchableOpacity>
         </View>
        
-        <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Syarat')}>
+        <TouchableOpacity style={styles.button} onPress={handleRegister}>
           <Text style={styles.buttonText}>Daftar</Text>
         </TouchableOpacity>
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import {measurePerformance} from 'reassure';
-import {Calendar, CalendarList} from '../../index';
+import {Calendar, CalendarList, ExpandableCalendar} from '../../index';
 
 const INITIAL_DATE = '2022-07-07';
 
@@ -11,6 +11,9 @@ describe('Playground testing', () => {
   const TestCaseList = () => {
     return <CalendarList current={INITIAL_DATE} />;
   };
+  const TestCaseExpandable = () => {
+    return <ExpandableCalendar current={INITIAL_DATE} />;
+  };
 
   it('calendar', async () => {
     const measurement = await measurePerformance(<TestCase />);
@@ -19,6 +22,11 @@ describe('Playground testing', () => {
 
   it('calendar list', async () => {
     const measurement = await measurePerformance(<TestCaseList />);
+    expect(measurement.meanDuration).toBeLessThan(100);
+  });
+
+  it('expandable calendar', async () => {
+    const measurement = await measurePerformance(<TestCaseExpandable />);
     expect(measurement.meanDuration).toBeLessThan(100);
   });
 });

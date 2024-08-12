@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
-import { View, TouchableOpacity, StyleSheet, Modal,Text } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Modal,Text,FlatList,ScrollView} from 'react-native';
 import * as Animatable from 'react-native-animatable';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
-import Grandparents from '../assets/icons/grandparents';
+import Grandparents from '../assets/icons/Grandparents';
+import ListItem from '../components/ListItem';
 import Baby from '../assets/icons/Baby';
 import IbuHamil from '../assets/icons/IbuHamil';
+import {fotoposyandu } from '../data/DataFoto';
+
+import {useSharedValue} from 'react-native-reanimated';
 
 // Mengatur lokal Indonesia
 LocaleConfig.locales['id'] = {
@@ -26,6 +30,12 @@ const Homescreen = () => {
   const [textColorBalita, setTextColorBalita] = useState('#D9D9D9');
   const [textColorIbuHamil, setTextColorIbuHamil] = useState('#D9D9D9');
   const [textColorLansia, setTextColorLansia] = useState('#D9D9D9');
+
+  const scrollX = useSharedValue(0);
+
+  const onScroll = e => {
+    scrollX.value = e.nativeEvent.contentOffset.x;
+  };
 
   const activities = {
     Balita: {
@@ -79,6 +89,7 @@ const Homescreen = () => {
   };
 
   return (
+    <ScrollView>
     <View style={Styles.Container}>
       <View style={Styles.CardHeader}>
         <Animatable.Text animation="fadeIn" style={Styles.Title}>Selamat Datang</Animatable.Text>
@@ -92,7 +103,7 @@ const Homescreen = () => {
       </View>
 
       <View>
-        <Text style={{ marginTop: 20, color: "black", fontFamily: "PlusJakartaSans-SemiBold" }}>
+        <Text style={{ marginTop: 20, color: "black", fontFamily: "PlusJakartaSans-SemiBold",marginHorizontal: 15, }}>
           Kegiatan Posyandu
         </Text>
       </View>
@@ -200,6 +211,33 @@ const Homescreen = () => {
         </TouchableOpacity>
       </View>
 
+      
+      <View style={Styles.PenggunaTitleCard}>
+        <Text style={Styles.PenggunaTitle}>Dokumentasi</Text>
+      </View>
+
+<View style={Styles.GambarContainer}>
+     <FlatList
+     data={fotoposyandu}
+     horizontal
+        style={{margin: 16}}
+        bounces={false}
+        onScroll={onScroll}
+        scrollEventThrottle={18}
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ padding: 0 }} 
+     keyExtractor={item => item.id.toString()}
+     renderItem={({ item, index}) => 
+     <ListItem 
+     path={item.path} 
+     scrollX={scrollX} 
+     index={index}
+     dataLength={fotoposyandu.length}
+     />
+    }
+     />
+  </View>
+
       <Modal
         animationType="slide"
         transparent={true}
@@ -230,6 +268,7 @@ const Homescreen = () => {
         </View>
       </Modal>
     </View>
+    </ScrollView>
   );
 };
 
@@ -237,13 +276,14 @@ const Styles = StyleSheet.create({
   Container: {
     flex: 1,
     backgroundColor: '#fff',
-    padding: 20,
+    
   },
 
   CardHeader: {
     borderRadius: 10,
     padding: 20,
     marginTop: 20,
+    marginHorizontal: 15,
     backgroundColor: '#008EB3'
   },
 
@@ -263,6 +303,7 @@ const Styles = StyleSheet.create({
     flexDirection: 'row',
     borderRadius: 10,
     marginTop: 20,
+    marginHorizontal: 15,
   },
 
   CardJadwalContainer: {
@@ -287,7 +328,7 @@ const Styles = StyleSheet.create({
   SubTitleCardJadwal: {
     color: '#fff',
     fontSize: 10,
-    width: 150,
+    width: 156,
     fontFamily: 'PlusJakartaSans-SemiBold'
   },
 
@@ -383,6 +424,11 @@ const Styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "PlusJakartaSans-SemiBold"
   },
+
+  GambarContainer: {
+    flex:1,
+    marginBottom: 50,
+  }
 
 });
 
