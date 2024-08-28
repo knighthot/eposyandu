@@ -12,9 +12,9 @@ const Syarat = () => {
   const route = useRoute();
   const { no_hp, nama, kata_sandi } = route.params;
 
-  const handleNext = () => {
+  const handleNextBalita = () => {
     // Pass all data to the FormulirScreen
-    navigation.navigate('FormulirScreen', {
+    navigation.navigate('IbuScreen', {
       no_hp,
       nama,
       kata_sandi,
@@ -24,6 +24,17 @@ const Syarat = () => {
     });
   };
 
+  const handleNextLansia = () => {
+    // Pass all data to the FormulirScreen
+    navigation.navigate('LansiaScreen', {
+      no_hp,
+      nama,
+      kata_sandi,
+      no_ktp: no_ktp,
+      no_kk: no_kk,
+      foto_kk: foto_kk,
+    });
+  };
   const handleImagePick = () => {
     launchImageLibrary(
       {
@@ -99,11 +110,19 @@ const Syarat = () => {
           </TouchableOpacity>
         </View>
       </View>
+      <View style={{flexDirection:'row' , justifyContent:'space-between'}}> 
       <View style={styles.btnContainer}>
-        <TouchableOpacity onPress={handleNext} style={styles.btnUpload}>
-          <Text style={styles.btnText}>Lanjut</Text>
+        <TouchableOpacity onPress={handleNextBalita} style={styles.btnUpload}>
+          <Text style={styles.btnText}>Untuk Bayi</Text>
         </TouchableOpacity>
       </View>
+      <View style={styles.btnContainer}>
+        <TouchableOpacity onPress={handleNextLansia} style={styles.btnUpload}>
+          <Text style={styles.btnText}>Untuk Lansia</Text>
+        </TouchableOpacity>
+      </View>
+      </View>
+     
     </View>
   );
 };
@@ -211,11 +230,11 @@ const styles = StyleSheet.create({
 
   btnContainer: {
     width: '50%',
-    alignSelf: 'flex-end',
+    alignItems: 'center',
   },
 
   btnUpload: {
-    width: '100%',
+    width: '80%',
     height: 50,
     backgroundColor: '#176B87',
     borderRadius: 15,

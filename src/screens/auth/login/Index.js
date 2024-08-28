@@ -42,7 +42,7 @@ const Index = () => {
               <Text style={styles.forget}>Lupa Kata Sandi?</Text>
         </TouchableOpacity>
       
-        <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Home')}>
+        <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Kader')}>
           <Text style={styles.buttonText}>Masuk</Text>
         </TouchableOpacity>
         <Text style={styles.titleRegis}>Belum Punya Akun?, Silakan Tekan Tombol Dibawah</Text>

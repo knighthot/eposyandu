@@ -14,6 +14,11 @@ import Login from './src/screens/auth/login/Index';
 import Register from './src/screens/auth/register/Index';
 import Syarat from './src/screens/auth/register/Syarat';
 import FormulirScreen from './src/screens/auth/register/FormulirScreen';
+import IbuScreen from './src/screens/auth/register/IbuScreen';
+import AyahScreen from './src/screens/auth/register/AyahScreen';
+import LansiaScreen from './src/screens/auth/register/LansiaScreen';
+import WaliScreen from './src/screens/auth/register/WaliScreen';
+import Kader from './src/routes/Kader';
 //auth end
 
 
@@ -108,7 +113,7 @@ const TabNavigator = () => {
                 bgColor="rgba(0, 255, 0, 0.1)"
                 activeColor="#00FF00"
                 inactiveColor="grey"
-                navigation={props.navigation}
+              
               />
             ),
           }}
@@ -128,6 +133,11 @@ const App = () => {
         <Stack.Screen name="Register" component={Register} />
         <Stack.Screen name="Syarat" component={Syarat} />
         <Stack.Screen name="FormulirScreen" component={FormulirScreen} />
+        <Stack.Screen name="IbuScreen" component={IbuScreen} />
+        <Stack.Screen name="AyahScreen" component={AyahScreen} />
+        <Stack.Screen name="LansiaScreen" component={LansiaScreen} />
+        <Stack.Screen name="WaliScreen" component={WaliScreen} />
+        <Stack.Screen name="Kader" component={Kader} />
       </Stack.Navigator>
     </NavigationContainer>
   );

@@ -7,6 +7,7 @@ import DropDownPicker from 'react-native-dropdown-picker';
 import DatePicker from 'react-native-date-picker';
 import { TouchableOpacity } from 'react-native-gesture-handler';
 import moment from 'moment';
+
 import 'moment/locale/id'; // Import Indonesian locale
 
 moment.locale('id'); // Set the locale to Indonesian
@@ -14,6 +15,7 @@ moment.locale('id'); // Set the locale to Indonesian
 // Form components for Balita and Lansia
 
 const FormBalita = ({ onComplete }) => {
+  
   const [balitaData, setBalitaData] = useState({
     nik_ibu: '', nama_ibu: '', jenis_kelamin_ibu: '', tempat_lahir_ibu: '', tanggal_lahir_ibu: null,
     alamat_ktp_ibu: '', kelurahan_ktp_ibu: '', kecamatan_ktp_ibu: '', kota_ktp_ibu: '', provinsi_ktp_ibu: '',
@@ -841,8 +843,10 @@ const FormulirScreen = () => {
         tabBarIndicatorStyle: { backgroundColor: '#fff' },
         tabBarActiveTintColor: '#fff',
         tabBarInactiveTintColor: '#ddd',
+       
       }}
     >
+      
       <Tab.Screen name="Wali Balita">
         {() => <FormBalita onComplete={handleComplete} />}
       </Tab.Screen>
