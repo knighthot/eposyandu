@@ -26,7 +26,7 @@ const styles = {
     paddingTop: 25,
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    height: 125,
+    height: 80,
     backgroundColor: 'white',
   },
   headerTitle: {

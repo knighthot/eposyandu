@@ -14,10 +14,14 @@ import DashboardLansia from '../screens/Kader/lansia/Dashboard';
 import DataLansia from '../screens/Kader/lansia/dataLansia/DataLansia';
 import DashboardBalita from '../screens/Kader/balita/Dashboard';
 import DataAnak from '../screens/Kader/balita/dataAnak/DataAnak';
+import DetailAnak from '../screens/Kader/balita/dataAnak/DetailAnak';
+import DetailOrtu from '../screens/Kader/balita/dataOrangTua/DetailOrtu';
 import DataOrtu from '../screens/Kader/balita/dataOrangTua/DataOrtu';
 import Kegiatan from '../screens/Kader/kegiatan/Kegiatan';
 import JadwalPosyandu from '../screens/Kader/kegiatan/JadwalPosyandu';
-
+import DataPa from '../screens/Kader/balita/dataPa/DataPa';
+import DataImunisasiAnak from '../screens/Kader/balita/dataImunisasi/DataImunisasiAnak';
+import DetailOrtuAyah from '../screens/Kader/balita/dataOrangTua/DetailOrtuAyah';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -66,6 +70,7 @@ const TabNavigator = () => {
       initialRouteName="DashboardBalita"
       screenOptions={{
         headerShown: false,
+        tabBarShowLabel: false,
         tabBarStyle: {
           height: 60,
           position: 'absolute',
@@ -76,6 +81,7 @@ const TabNavigator = () => {
         name="Balita"
         component={DashboardBalita}
         options={{
+          headerShown: false,
           tabBarShowLabel: false,
           tabBarButton: (props) => (
             <TabButton
@@ -93,6 +99,7 @@ const TabNavigator = () => {
         name="Lansia"
         component={DashboardLansia}
         options={{
+          headerShown: false,
           tabBarShowLabel: false,
           tabBarButton: (props) => (
             <TabButton
@@ -111,40 +118,90 @@ const TabNavigator = () => {
 };
 
 // Stack Navigator
+const DrawerNavigator = () => {
+  return (
+    <Drawer.Navigator>
+      <Drawer.Screen
+        name="Home"
+        component={StackNavigator} 
+        options={{ headerShown: false }} // We control the header within StackNavigator now
+      />
+      <Drawer.Screen
+        name="Jadwal Posyandu"
+        component={JadwalPosyandu}
+        options={{
+          header: ({ navigation }) => <HeaderKader openDrawer={() => navigation.openDrawer()} />, // Show HeaderKader
+        }}
+      />
+      <Drawer.Screen
+        name="Kegiatan"
+        component={Kegiatan}
+        options={{
+          header: ({ navigation }) => <HeaderKader openDrawer={() => navigation.openDrawer()} />, // Show HeaderKader
+        }}
+      />
+    </Drawer.Navigator>
+  );
+};
+
 const StackNavigator = () => {
   return (
-    <Stack.Navigator  screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="TabNavigator" component={TabNavigator} />
-      <Stack.Screen name="DataAnak" component={DataAnak} />
-      <Stack.Screen name="DataOrtu" component={DataOrtu} />
-      <Stack.Screen name="DataLansia" component={DataLansia} />
+    <Stack.Navigator>
+      {/* Home Screen with HeaderKader */}
+      <Stack.Screen
+        name="Dashboard"
+        component={TabNavigator} 
+        options={{
+          header: ({ navigation }) => <HeaderKader openDrawer={() => navigation.openDrawer()} />, // Show HeaderKader only on the dashboard
+        }}
+      />
+      {/* All other screens with hidden header */}
+      <Stack.Screen
+        name="DataOrtu"
+        component={DataOrtu}
+        options={{ headerShown: false }} // Hide header for DataOrtu
+      />
+      <Stack.Screen
+        name="DataLansia"
+        component={DataLansia}
+        options={{ headerShown: false }} // Hide header for DataLansia
+      />
+      <Stack.Screen
+        name="DataAnak"
+        component={DataAnak}
+        options={{ headerShown: false }} // Hide header for DataAnak
+      />
+      <Stack.Screen
+        name="DetailAnak"
+        component={DetailAnak}
+        options={{ headerShown: false }} // Hide header for DetailAnak
+      />
+      <Stack.Screen
+        name="DataPa"
+        component={DataPa}
+        options={{ headerShown: false }} // Hide header for DataPa
+      />
+      <Stack.Screen
+        name="DataImunisasiAnak"
+        component={DataImunisasiAnak}
+        options={{ headerShown: false }} // Hide header for DataImunisasiAnak
+      />
+        
+        <Stack.Screen name="DetailOrtu" component={DetailOrtu} options={{headerShown: false}} />
+        <Stack.Screen name="DetailOrtuAyah" component={DetailOrtuAyah} options={{headerShown: false}} />
+       
 
     </Stack.Navigator>
   );
 };
 
-const DrawerNavigator = () => {
-  return (
-    <Drawer.Navigator
-      screenOptions={{
-        header: ({ navigation }) => (
-          <HeaderKader
-            openDrawer={() => navigation.openDrawer()}
-          />
-        ),
-      }}
-    >
-      <Drawer.Screen name="Home" component={StackNavigator} />
-      <Drawer.Screen name="Jadwal Posyandu" component={JadwalPosyandu} />
-      <Drawer.Screen name="Kegiatan" component={Kegiatan} />
-    </Drawer.Navigator>
-  );
-};
+
+
 
 const Kader = () => {
   return (
     <NavigationContainer independent = {true}>
-      <DrawerNavigator />
+      <DrawerNavigator  />
     </NavigationContainer>
   );
 };

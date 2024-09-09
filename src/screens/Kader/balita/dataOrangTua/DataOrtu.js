@@ -5,7 +5,8 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import DropDownPicker from 'react-native-dropdown-picker';
 import DatePicker from 'react-native-date-picker';
 import React, { useState } from 'react'
-
+import { useNavigation } from '@react-navigation/native';
+import Header from '../../componentKader/Header';
 const dummyData = [
   {
     id: 1,
@@ -29,49 +30,7 @@ const dummyData = [
 
 ];
 
-const renderItem = ({ item }) => (
-  <View style={styles.verificationCard}>
-    <View style={styles.verificationCardContent}>
-      <View style={{ flexDirection: 'column', width: '70%' }}>
 
-        <Text style={styles.verificationTextTitle}>{item.nama_balita}</Text>
-        <View style={{ flexDirection: 'row' }}>
-          <Icon name="user" size={20} color="#16DBCC" />
-          <Text style={styles.verificationText3}>{item.Nama_Ibu}</Text>
-        </View>
-
-        <View style={{ flexDirection: 'row' }}>
-          <Icon name="user" size={20} color="#16DBCC" />
-          <Text style={styles.verificationText3}>{item.Nik_Balita}</Text>
-        </View>
-
-
-
-      </View>
-      <View style={{ flexDirection: 'column', top: 10, }}>
-        <View style={{ flexDirection: 'row' }}>
-          <TouchableOpacity
-            style={styles.editButton}
-            onPress={() => handleEditPress(item)}
-          >
-            <Icon name="eye" size={20} color="#16DBCC" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.deleteButton}
-            onPress={() =>
-              Alert.alert('Confirmation', `Are you sure you want to delete user ${item.username}?`, [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'OK', onPress: () => handleDeleteUser(item.id) },
-              ])
-            }
-          >
-            <Icon name="trash" size={24} color="#FF6000" />
-          </TouchableOpacity>
-        </View>
-      </View>
-    </View>
-  </View>
-);
 
 const DataOrtu = () => {
   const [printModalVisible, setPrintModalVisible] = useState(false);
@@ -82,6 +41,23 @@ const DataOrtu = () => {
     { label: 'Laki-Laki', value: 'l' },
     { label: 'Perempuan', value: 'P' }
   ]);
+  const [searchQuery, setSearchQuery] = useState('');  // State untuk menyimpan query pencarian
+  const [filteredData, setFilteredData] = useState(dummyData);  // Data yang akan ditampilkan setelah di-filter
+  const navigation = useNavigation();
+  
+  const handleSearch = (query) => {
+    setSearchQuery(query);
+    if (query === '') {
+      setFilteredData(dummyData);  // Jika query kosong, tampilkan semua data
+    } else {
+      // Filter data sesuai dengan nama balita atau nama ibu
+      const filtered = dummyData.filter((item) =>
+        item.nama_balita.toLowerCase().includes(query.toLowerCase()) ||
+        item.Nama_Ibu.toLowerCase().includes(query.toLowerCase())
+      );
+      setFilteredData(filtered);
+    }
+  };
 
   const [formData, setFormData] = useState({
     nikAnak: '',
@@ -109,9 +85,67 @@ const DataOrtu = () => {
     setPrintModalVisible(true);
   };
 
+  const renderItem = ({ item }) => (
+    <View style={styles.verificationCard}>
+      <View style={styles.verificationCardContent}>
+        <View style={{ flexDirection: 'column', width: '70%' }}>
+  
+          <Text style={styles.verificationTextTitle}>{item.nama_balita}</Text>
+          <View style={{ flexDirection: 'row' }}>
+            <Icon name="user" size={20} color="#16DBCC" />
+            <Text style={styles.verificationText3}>{item.Nama_Ibu}</Text>
+          </View>
+  
+          <View style={{ flexDirection: 'row' }}>
+            <Icon name="user" size={20} color="#16DBCC" />
+            <Text style={styles.verificationText3}>{item.Nik_Balita}</Text>
+          </View>
+  
+  
+  
+        </View>
+        <View style={{ flexDirection: 'column', top: 10, }}>
+          <View style={{ flexDirection: 'row' }}>
+            <TouchableOpacity
+              style={styles.editButton}
+              onPress={() => navigation.navigate('DetailOrtu', { item })}
+            >
+              <Icon name="eye" size={20} color="#16DBCC" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={() =>
+                Alert.alert('Confirmation', `Are you sure you want to delete user ${item.username}?`, [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'OK', onPress: () => handleDeleteUser(item.id) },
+                ])
+              }
+            >
+              <Icon name="trash" size={24} color="#FF6000" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </View>
+  );
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F5F7FA' }}>
+      <Header title="Data Orang tua" onLeftPress={() => navigation.goBack()} />
+      {/* Search Input */}
+      <View style={{backgroundColor: 'white', justifyContent: 'center', alignItems: 'center',paddingBottom: 10}}>
+        
+      <View style={styles.searchContainer}>
+        <Icon name="search" size={20} color="#718EBF" style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Cari nama ibu dan ayah.."
+          placeholderTextColor={'#718EBF'}
+          value={searchQuery}
+          onChangeText={handleSearch}
+        />
+      </View>
+      </View>
      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginHorizontal: 20, marginTop: 20 }}>
                 <TouchableOpacity style={styles.cardBox}>
                     <View style={[styles.cardHeader, { backgroundColor: '#FFF5D9' }]}>
@@ -134,7 +168,7 @@ const DataOrtu = () => {
             </View>
       <View>
         <FlatList
-          data={dummyData}
+          data={filteredData}
           style={{ backgroundColor: '#fff', marginTop: 20, borderRadius: 2 }}
           renderItem={renderItem}
           keyExtractor={(item) => item.id.toString()}
@@ -703,6 +737,25 @@ const styles = StyleSheet.create({
   datePickerButtonText: {
     color: '#000',
     marginLeft: 20,
+  },
+  searchContainer: {
+    flexDirection: 'row', 
+    backgroundColor: '#F5F7FA',
+    alignItems: 'center', // Pusatkan konten di tengah secara vertikal
+    borderColor: '#ccc',
+    borderWidth: 1,
+    borderRadius: 25,
+    margin: 10,
+    width: '90%',
+    paddingHorizontal: 10,
+  },
+  searchIcon: {
+    marginRight: 10, // Beri jarak antara icon dan input
+  },
+  searchInput: {
+    flex: 1, // Agar TextInput memenuhi sisa ruang
+    height: 40,
+    color: '#718EBF',
   },
 
 });

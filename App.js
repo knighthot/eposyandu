@@ -13,13 +13,17 @@ import Homescreen from './src/screens/Homescreen';
 import Login from './src/screens/auth/login/Index';
 import Register from './src/screens/auth/register/Index';
 import Syarat from './src/screens/auth/register/Syarat';
-import FormulirScreen from './src/screens/auth/register/FormulirScreen';
+
+
 import IbuScreen from './src/screens/auth/register/IbuScreen';
 import AyahScreen from './src/screens/auth/register/AyahScreen';
 import LansiaScreen from './src/screens/auth/register/LansiaScreen';
 import WaliScreen from './src/screens/auth/register/WaliScreen';
 import Kader from './src/routes/Kader';
+
 //auth end
+
+import Users from './src/routes/Users';
 
 
 const Stack = createStackNavigator();
@@ -127,17 +131,19 @@ const App = () => {
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="SplashScreen" component={splashscreen} />
+     
+    <Stack.Screen name="SplashScreen" component={splashscreen} />
         <Stack.Screen name="Home" component={TabNavigator} />
         <Stack.Screen name="Login" component={Login} />
         <Stack.Screen name="Register" component={Register} />
         <Stack.Screen name="Syarat" component={Syarat} />
-        <Stack.Screen name="FormulirScreen" component={FormulirScreen} />
         <Stack.Screen name="IbuScreen" component={IbuScreen} />
         <Stack.Screen name="AyahScreen" component={AyahScreen} />
         <Stack.Screen name="LansiaScreen" component={LansiaScreen} />
         <Stack.Screen name="WaliScreen" component={WaliScreen} />
-        <Stack.Screen name="Kader" component={Kader} />
+        <Stack.Screen name="Kader" component={Kader} /> 
+        <Stack.Screen name="Users" component={Users} />
+
       </Stack.Navigator>
     </NavigationContainer>
   );

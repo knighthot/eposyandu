@@ -84,13 +84,13 @@ const Dashboard = () => {
                         </View>
                         <Text style={styles.buttonText} >Data Ortu</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={{ width: '20%' }}>
+                    <TouchableOpacity style={{ width: '20%' }} onPress={() => navigation.navigate('DataPa')}>
                         <View style={styles.bottomButton}>
                             <IconMaterial name="calendar" size={30} color='#F37676' />
                         </View>
                         <Text style={styles.buttonText}>Data PA</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={{ width: '20%' }}>
+                    <TouchableOpacity style={{ width: '20%' }} onPress={() => navigation.navigate('DataImunisasiAnak')}>
                         <View style={styles.bottomButton}>
                             <IconMaterial name="calendar" size={30} color='#F37676' />
                         </View>
