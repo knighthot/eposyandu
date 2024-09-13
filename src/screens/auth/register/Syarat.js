@@ -4,37 +4,73 @@ import Logo from '../../../assets/images/logo_posyandu.png';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import ErrorModal from '../../../components/modals/ErrorModal';
 const Syarat = () => {
   const [foto_kk, setFotoKK] = useState(null);
   const [no_ktp, setNoKtp] = useState('');
   const [no_kk, setNoKk] = useState('');
   const navigation = useNavigation();
+  const [modalVisible, setModalVisible] = useState(false);
+  const [errorMessages, setErrorMessages] = useState([]);
   const route = useRoute();
-  const { no_hp, nama, kata_sandi } = route.params;
+  const { email, nama, kata_sandi } = route.params;
 
+
+  const validateInputs = () => {
+    const errors = [];
+    if (!no_ktp || no_ktp.length < 16) {
+      errors.push('No KTP harus diisi dan minimal 16 karakter.');
+    }
+    if (!no_kk || no_kk.length < 16) {
+      errors.push('No KK harus diisi dan minimal 16 karakter.');
+    }
+    if (!foto_kk) {
+      errors.push('Foto Kartu Keluarga harus diupload.');
+    }
+
+    return errors;
+  };
   const handleNextBalita = () => {
-    // Pass all data to the FormulirScreen
+    const errors = validateInputs();
+    if (errors.length > 0) {
+      setErrorMessages(errors);
+      setModalVisible(true);
+      return;
+    }
     navigation.navigate('IbuScreen', {
-      no_hp,
+      email,
       nama,
       kata_sandi,
-      no_ktp: no_ktp,
-      no_kk: no_kk,
-      foto_kk: foto_kk,
+      no_ktp,
+      no_kk,
+      foto_kk,
     });
   };
 
   const handleNextLansia = () => {
-    // Pass all data to the FormulirScreen
+    const errors = validateInputs();
+    if (errors.length > 0) {
+      setErrorMessages(errors);
+      setModalVisible(true);
+      return;
+    }
+    const parsedNoKtp = parseInt(no_ktp, 10);
+    const parsedNoKk = parseInt(no_kk, 10);
+
+    if (isNaN(parsedNoKtp) || isNaN(parsedNoKk)) {
+      Alert.alert('Error', 'No KTP atau No KK tidak valid');
+      return;
+    }
     navigation.navigate('LansiaScreen', {
-      no_hp,
+      email,
       nama,
       kata_sandi,
-      no_ktp: no_ktp,
-      no_kk: no_kk,
-      foto_kk: foto_kk,
+      no_ktp: parsedNoKtp,
+      no_kk: parsedNoKk,
+      foto_kk,
     });
   };
+
   const handleImagePick = () => {
     launchImageLibrary(
       {
@@ -53,8 +89,8 @@ const Syarat = () => {
           const fileSize = response.assets[0].fileSize;
           const fileType = response.assets[0].type;
 
-          if (fileSize > 2 * 1024 * 1024) { // 2MB file size limit
-            Alert.alert('Ukuran file terlalu besar', 'Ukuran file maksimal adalah 2MB');
+          if (fileSize > 3 * 1024 * 1024) { // 2MB file size limit
+            Alert.alert('Ukuran file terlalu besar', 'Ukuran file maksimal adalah 3MB');
           } else if (!fileType.startsWith('image/')) {
             Alert.alert('Format file tidak didukung', 'Hanya file gambar yang diizinkan');
           } else {
@@ -122,7 +158,11 @@ const Syarat = () => {
         </TouchableOpacity>
       </View>
       </View>
-     
+      <ErrorModal
+        visible={modalVisible}
+        message={errorMessages.join('\n')}
+        onClose={() => setModalVisible(false)}
+      />
     </View>
   );
 };

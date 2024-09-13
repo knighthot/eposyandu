@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { BarChart } from 'react-native-gifted-charts';
-
+import moment from 'moment';
 const imunisasiData = [
     {
       id: '1',
@@ -65,21 +65,57 @@ const renderItem = ({ item }) => (
     </View>
   );
   
-const BiodataSection = () => (
-  <View style={styles.dataSection}>
-    <Text style={styles.label}>Nama</Text>
-    <TextInput style={styles.input} value="Setia Budi" editable={false} />
-
-    <Text style={styles.label}>NIK</Text>
-    <TextInput style={styles.input} value="12273872918" editable={false} />
-
-    <Text style={styles.label}>Umur</Text>
-    <TextInput style={styles.input} value="1 tahun, 7 bulan" editable={false} />
-
-    <Text style={styles.label}>Riwayat Penyakit</Text>
-    <TextInput style={styles.input} value="Tidak ada" editable={false} />
-  </View>
-);
+  const BiodataSection = ({ dataAnak }) => {
+    // Menghitung umur
+    const calculateAge = (birthDate) => {
+      if (!birthDate) return ''; // Jika tidak ada tanggal lahir
+  
+      const now = moment(); // Waktu sekarang
+      const birthMoment = moment(birthDate); // Tanggal lahir
+      const years = now.diff(birthMoment, 'years'); // Selisih dalam tahun
+      const months = now.diff(birthMoment, 'months') % 12; // Sisa bulan setelah dikurangi tahun
+  
+      return `${years} tahun, ${months} bulan`;
+    };
+  
+    return (
+      <View style={styles.dataSection}>
+        <Text style={styles.label}>Nama</Text>
+        <TextInput style={styles.input} value={dataAnak?.nama_balita || ''} editable={false} />
+  
+        <Text style={styles.label}>NIK</Text>
+        <TextInput style={styles.input} value={dataAnak?.nik_balita?.toString() || ''} editable={false} />
+  
+        <Text style={styles.label}>Tempat Lahir</Text>
+        <TextInput style={styles.input} value={dataAnak?.tempat_lahir_balita || ''} editable={false} />
+  
+        <Text style={styles.label}>Tanggal Lahir</Text>
+        <TextInput style={styles.input} value={moment(dataAnak?.tanggal_lahir_balita).format('dddd, DD MMMM YYYY')} editable={false} />
+  
+        <Text style={styles.label}>Umur</Text>
+        <TextInput style={styles.input} value={calculateAge(dataAnak?.tanggal_lahir_balita)} editable={false} />
+  
+        <Text style={styles.label}>Jenis Kelamin</Text>
+        <TextInput style={styles.input} value={dataAnak?.jenis_kelamin_balita === 'l' ? 'Laki-Laki' : 'Perempuan'} editable={false} />
+  
+        <Text style={styles.label}>Berat Badan Awal</Text>
+        <TextInput style={styles.input} value={dataAnak?.berat_badan_awal_balita?.toString() + ' kg' || ''} editable={false} />
+  
+        <Text style={styles.label}>Tinggi Badan Awal</Text>
+        <TextInput style={styles.input} value={dataAnak?.tinggi_badan_awal_balita?.toString() + ' cm' || ''} editable={false} />
+  
+        <Text style={styles.label}>Riwayat Kelahiran</Text>
+        <TextInput style={styles.input} value={dataAnak?.riwayat_kelahiran_balita || ''} editable={false} />
+  
+        <Text style={styles.label}>Riwayat Penyakit</Text>
+        <TextInput style={styles.input} value={dataAnak?.riwayat_penyakit_balita || 'Tidak ada'} editable={false} />
+  
+        <Text style={styles.label}>Keterangan</Text>
+        <TextInput style={styles.input} value={dataAnak?.keterangan_balita || ''} editable={false} />
+      </View>
+    );
+  };
+  
 
 const PASection = () => {
     const datadummy = [
@@ -133,13 +169,36 @@ const PASection = () => {
 const ImunisasiSection = () => (
     
   <View style={styles.dataSection}>
-    <FlatList
-      data={imunisasiData}
-      keyExtractor={item => item.id}
-      renderItem={renderItem}
-      style={{ maxHeight: 300 }}
-    />
-  </View>
+  {/* Gantikan FlatList dengan View dan manual rendering */}
+  {imunisasiData.map((item) => (
+    <View key={item.id} style={styles.verificationCard}>
+      <View style={styles.verificationCardContent}>
+        <View style={{ flexDirection: 'column', width: '70%' }}>
+          <Text style={styles.verificationTextTitle}>{item.nama_balita}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Icon name="user" size={20} color="#16DBCC" />
+            <Text style={styles.verificationText3}>{item.jenis_imunisasi}</Text>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Icon name="calendar" size={20} color="#16DBCC" />
+            <Text style={styles.verificationText3}>{item.tanggal_imunisasi}</Text>
+          </View>
+        </View>
+        <View style={{ flexDirection: 'column', justifyContent: 'center' }}>
+          <TouchableOpacity
+            style={[
+              styles.statusButton,
+              item.status === 'Sudah' ? styles.sudah : styles.belum,
+            ]}
+          >
+            <Text style={styles.statusText}>{item.status}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  ))}
+</View>
+
 );
 
 export { BiodataSection, PASection, ImunisasiSection };

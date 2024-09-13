@@ -2,9 +2,10 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-nati
 import IconMaterial from 'react-native-vector-icons/MaterialCommunityIcons';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import React from 'react'
-
+import { useNavigation } from '@react-navigation/native';
 
 const DashboardLansia = () => {
+    const navigation = useNavigation();
     return (
         <View style={{ flex: 1, backgroundColor: '#F5F7FA' }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginHorizontal: 20, marginTop: 20 }}>
@@ -51,32 +52,40 @@ const DashboardLansia = () => {
             {/* Bottom Buttons */}
             <View style={{ backgroundColor: '#fff', marginHorizontal: 20, marginTop: 20, paddingVertical: 20, borderRadius: 10 }}>
                 <View style={styles.buttonRow}>
-                    <TouchableOpacity style={{ width: '20%' }}>
+                    <TouchableOpacity style={{ width: '20%' }} onPress={() => navigation.navigate('DataLansia')}>
                         <View style={styles.bottomButton}>
                             <IconMaterial name="calendar" size={30} color='#F37676' />
                         </View>
-                        <Text style={styles.buttonText}>Data Anak</Text>
+                        <Text style={styles.buttonText}>Data Lansia</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={{ width: '20%' }}>
+                        <View style={styles.bottomButton}>
+                            <IconMaterial name="calendar" size={30} color='#F37676' onPress={() => navigation.navigate('DataWali')} />
+                        </View>
+                        <Text style={styles.buttonText}>Data Wali</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={{ width: '20%' }}>
                         <View style={styles.bottomButton}>
                             <IconMaterial name="calendar" size={30} color='#F37676' />
                         </View>
-                        <Text style={styles.buttonText}>Data Ortu</Text>
+                        <Text style={styles.buttonText}>Data Kesehatan Lansia</Text>
+                    </TouchableOpacity>
+                    
+                </View>
+                <View style={styles.buttonRow}>
+                    <TouchableOpacity style={{ width: '20%' }}>
+                        <View style={styles.bottomButton}>
+                            <IconMaterial name="calendar" size={30} color='#F37676' />
+                        </View>
+                        <Text style={styles.buttonText}>Data Kunjungan</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={{ width: '20%' }}>
                         <View style={styles.bottomButton}>
                             <IconMaterial name="calendar" size={30} color='#F37676' />
                         </View>
-                        <Text style={styles.buttonText}>Data PA</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={{ width: '20%' }}>
-                        <View style={styles.bottomButton}>
-                            <IconMaterial name="calendar" size={30} color='#F37676' />
-                        </View>
-                        <Text style={styles.buttonText}>Data Imunisasi</Text>
+                        <Text style={styles.buttonText}>Laporan Rekapitulasi</Text>
                     </TouchableOpacity>
                 </View>
-               
             </View>
         </View>
     )

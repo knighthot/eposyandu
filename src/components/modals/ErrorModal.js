@@ -47,7 +47,7 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   errorText: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#176B87',
     
     marginVertical: 5,

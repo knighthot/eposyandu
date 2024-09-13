@@ -1,16 +1,17 @@
 import React from 'react';
-import { SafeAreaView, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { SafeAreaView, StyleSheet, Text, View, TouchableOpacity,Alert } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { createDrawerNavigator } from '@react-navigation/drawer';
+import { createDrawerNavigator,DrawerContentScrollView, DrawerItemList } from '@react-navigation/drawer';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import * as Animatable from 'react-native-animatable';
 import HeaderKader from '../components/HeaderKader';
-
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useNavigation } from '@react-navigation/native';
 // Screens
 import DashboardLansia from '../screens/Kader/lansia/Dashboard';
-
+import App from '../../App';
 import DataLansia from '../screens/Kader/lansia/dataLansia/DataLansia';
 import DashboardBalita from '../screens/Kader/balita/Dashboard';
 import DataAnak from '../screens/Kader/balita/dataAnak/DataAnak';
@@ -18,11 +19,17 @@ import DetailAnak from '../screens/Kader/balita/dataAnak/DetailAnak';
 import DetailOrtu from '../screens/Kader/balita/dataOrangTua/DetailOrtu';
 import DataOrtu from '../screens/Kader/balita/dataOrangTua/DataOrtu';
 import Kegiatan from '../screens/Kader/kegiatan/Kegiatan';
-import JadwalPosyandu from '../screens/Kader/kegiatan/JadwalPosyandu';
 import DataPa from '../screens/Kader/balita/dataPa/DataPa';
 import DataImunisasiAnak from '../screens/Kader/balita/dataImunisasi/DataImunisasiAnak';
-import DetailOrtuAyah from '../screens/Kader/balita/dataOrangTua/DetailOrtuAyah';
-
+import EditIbuForm from '../screens/Kader/balita/dataOrangTua/EditIbuForm';
+import EditAyahForm from '../screens/Kader/balita/dataOrangTua/EditAyahForm.js';
+import Login from '../screens/auth/login/Index'
+import InfoAplikasi from '../screens/InfoAplikasi';
+import DataDokumentasi from '../screens/Kader/Dokumentasi/DataDokumentasi.js';
+import DataWali from '../screens/Kader/lansia/DataWali/DataWali.js';
+import AyahForm from '../screens/Kader/balita/dataOrangTua/AyahForm';
+import IbuForm from '../screens/Kader/balita/dataOrangTua/IbuForm';
+import DetailLansia from '../screens/Kader/lansia/dataLansia/DetailLansia.js';
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 const Drawer = createDrawerNavigator();
@@ -117,28 +124,89 @@ const TabNavigator = () => {
   );
 };
 
+
+// Custom drawer content for adding logout button
+const CustomDrawerContent = (props) => {
+  const navigation = useNavigation();
+
+  const handleLogout = async () => {
+    Alert.alert(
+      "Logout",
+      "Apakah Anda yakin ingin keluar?",
+      [
+        {
+          text: "Batal",
+          onPress: () => null,
+          style: "cancel"
+        },
+        {
+          text: "Logout",
+          onPress: async () => {
+            // Hapus semua data dari AsyncStorage
+            await AsyncStorage.removeItem('token');
+            await AsyncStorage.removeItem('userRole');
+            await AsyncStorage.removeItem('userName');
+            await AsyncStorage.removeItem('userEmail');
+
+            // Arahkan kembali ke layar login
+            
+          }
+        }
+      ]
+    );
+  };
+
+  return (
+    <DrawerContentScrollView {...props}>
+      <DrawerItemList {...props} />
+      
+      {/* Tombol Logout */}
+      <TouchableOpacity
+        style={{
+          marginTop: 20,
+          padding: 10,
+          backgroundColor: '#f00',
+          borderRadius: 10,
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
+        onPress={handleLogout}
+      >
+        <Text style={{ color: '#fff', fontWeight: 'bold' }}>Logout</Text>
+      </TouchableOpacity>
+    </DrawerContentScrollView>
+  );
+};
+
 // Stack Navigator
 const DrawerNavigator = () => {
   return (
-    <Drawer.Navigator>
+    <Drawer.Navigator drawerContent={(props) => <CustomDrawerContent {...props} />}>
       <Drawer.Screen
         name="Home"
-        component={StackNavigator} 
-        options={{ headerShown: false }} // We control the header within StackNavigator now
-      />
-      <Drawer.Screen
-        name="Jadwal Posyandu"
-        component={JadwalPosyandu}
-        options={{
-          header: ({ navigation }) => <HeaderKader openDrawer={() => navigation.openDrawer()} />, // Show HeaderKader
-        }}
+        component={StackNavigator}
+        options={{ headerShown: false }}
       />
       <Drawer.Screen
         name="Kegiatan"
         component={Kegiatan}
         options={{
-          header: ({ navigation }) => <HeaderKader openDrawer={() => navigation.openDrawer()} />, // Show HeaderKader
+          header: ({ navigation }) => <HeaderKader openDrawer={() => navigation.openDrawer()} />,
         }}
+      />
+      <Drawer.Screen
+        name="Dokumentasi"
+        component={DataDokumentasi}
+        options={{
+          header: ({ navigation }) => <HeaderKader openDrawer={() => navigation.openDrawer()} />,
+        }}
+        />
+      <Drawer.Screen
+      name='Info Aplikasi'
+      component={InfoAplikasi}
+      options={{
+        header: ({navigation}) => <HeaderKader openDrawer={() => navigation.openDrawer()}/>,
+      }}
       />
     </Drawer.Navigator>
   );
@@ -147,6 +215,7 @@ const DrawerNavigator = () => {
 const StackNavigator = () => {
   return (
     <Stack.Navigator>
+     
       {/* Home Screen with HeaderKader */}
       <Stack.Screen
         name="Dashboard"
@@ -186,11 +255,15 @@ const StackNavigator = () => {
         component={DataImunisasiAnak}
         options={{ headerShown: false }} // Hide header for DataImunisasiAnak
       />
+
         
         <Stack.Screen name="DetailOrtu" component={DetailOrtu} options={{headerShown: false}} />
-        <Stack.Screen name="DetailOrtuAyah" component={DetailOrtuAyah} options={{headerShown: false}} />
-       
-
+       <Stack.Screen name="AyahForm" component={AyahForm} options={{headerShown: false}} />
+       <Stack.Screen name="IbuForm" component={IbuForm} options={{headerShown: false}} />
+      <Stack.Screen name="EditIbuForm" component={EditIbuForm} options={{headerShown: false}} />
+      <Stack.Screen name="EditAyahForm" component={EditAyahForm} options={{headerShown: false}} />
+      <Stack.Screen name="DataWali" component={DataWali} options={{headerShown: false}} />
+        <Stack.Screen name="DetailLansia" component={DetailLansia} options={{headerShown: false}} />
     </Stack.Navigator>
   );
 };

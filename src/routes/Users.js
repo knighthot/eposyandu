@@ -5,10 +5,11 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import * as Animatable from 'react-native-animatable';
-
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import DashboardBalita from '../screens/users/DashboardBalita';
 import DashboardLansia from '../screens/users/DashboardLansia';
-
+import axios from 'axios';
+import Config from 'react-native-config';
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -121,19 +122,37 @@ const TabNavigator = ({ hasOrangTua, hasWali }) => {
 const Users = () => {
   const [hasOrangTua, setHasOrangTua] = useState(false);
   const [hasWali, setHasWali] = useState(false);
-
+  
+  
   // Simulating fetching user data and checking fields
   useEffect(() => {
-    // Simulate user data
-    const dummyUser = {
-      orangtua: null,  // Change to null to test the condition
-      wali: 1,    // Change to a number to test the condition
+    const fetchUserData = async () => {
+      const userId = await AsyncStorage.getItem('userId');
+      const token = await AsyncStorage.getItem('token');
+      console.log(token)
+      try {
+        if (!userId || !token) {
+          console.error('User ID or authentication token is missing');
+          return;
+        }
+
+        // Make the API request with the token included in the headers
+        const response = await axios.get(`${Config.API_URL}/pengguna/${userId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const userData = response;
+
+        setHasOrangTua(userData.orangtua !== null);
+        setHasWali(userData.wali !== null);
+      } catch (error) {
+        console.error('Error fetching user data:', error.massage);
+      }
     };
 
-    setHasOrangTua(dummyUser.orangtua !== null);
-    setHasWali(dummyUser.wali !== null);
+    fetchUserData();
   }, []);
-
   return (
     <NavigationContainer independent={true}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>

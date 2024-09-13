@@ -114,7 +114,7 @@ const Homescreen = () => {
             <Animatable.Text animation="fadeIn" style={Styles.TitleCardJadwal}>Balita</Animatable.Text>
             <Animatable.Text animation="fadeIn" style={Styles.HeaderTitleCardJadwal}>Kamis, 12 Agustus 2022</Animatable.Text>
             <Animatable.Text animation="fadeIn" style={Styles.SubTitleCardJadwal} numberOfLines={2} ellipsizeMode="tail">
-              Lorem ipsum odor amet, consectetuer adipiscing elit. Urna ad convallis posuere enim dolor est
+             Kegiatan Pemeriksaan Balita
             </Animatable.Text>
           </View>
         </TouchableOpacity>
@@ -124,7 +124,7 @@ const Homescreen = () => {
             <Animatable.Text animation="fadeIn" style={Styles.TitleCardJadwal}>Lansia</Animatable.Text>
             <Animatable.Text animation="fadeIn" style={Styles.HeaderTitleCardJadwal}>Kamis, 12 Agustus 2022</Animatable.Text>
             <Animatable.Text animation="fadeIn" style={Styles.SubTitleCardJadwal} numberOfLines={2} ellipsizeMode="tail">
-              Lorem ipsum odor amet, consectetuer adipiscing elit. Urna ad convallis posuere enim dolor est
+            Kegiatan Pemeriksaan Lansia
             </Animatable.Text>
           </View>
         </TouchableOpacity>

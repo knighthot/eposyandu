@@ -1,79 +1,151 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList, Modal, TextInput } from 'react-native'
+import { View, Text, StyleSheet, TouchableOpacity,  FlatList, Modal, TextInput } from 'react-native'
 import moment from 'moment';
 import IconMaterial from 'react-native-vector-icons/MaterialCommunityIcons';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import DropDownPicker from 'react-native-dropdown-picker';
 import DatePicker from 'react-native-date-picker';
-import React, { useState } from 'react'
-import { useNavigation } from '@react-navigation/native';
+import React, { useState,useEffect } from 'react'
+import { useNavigation,useFocusEffect } from '@react-navigation/native';
 import Header from '../../componentKader/Header';
-const dummyData = [
-  {
-    id: 1,
-    nama_balita: 'Balita 1',
-    Nama_Ibu: 'Ibu 1',
-    Nik_Balita: '1234567890123456',
-  },
-  {
-    id: 2,
-    nama_balita: 'Balita 2',
-    Nama_Ibu: 'Ibu 2',
-    Nik_Balita: '1234567890123456',
-  },
-  {
-    id: 3,
-    nama_balita: 'Balita 3',
-    Nama_Ibu: 'Ibu 3',
-    Nik_Balita: '1234567890123456',
-  },
+import Config from 'react-native-config';
+import axios from 'axios';
+import ErrorModal from '../../../../components/modals/ErrorModal';
+import LoadingModal from '../../../../components/modals/LoadingModal';
+import SuccessModal from '../../../../components/modals/SuccessModal ';
+import ConfirmationModal from '../../../../components/modals/ConfirmationModal';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-
-];
 
 
 
 const DataOrtu = () => {
   const [printModalVisible, setPrintModalVisible] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [openIbu, setOpenIbu] = useState(false);
-  const [isDatePickerOpenIbu, setDatePickerOpenIbu] = useState(false);
-  const [items, setItems] = useState([
-    { label: 'Laki-Laki', value: 'l' },
-    { label: 'Perempuan', value: 'P' }
-  ]);
+  
+  const [orangtua, setOrangTua] = useState([]);  
+
+  const [jumlahAnak, setJumlahAnak] = useState(0);
+  const [jumlahortu, setJumlahOrtu] = useState(0);
+  const [loadingVisible, setLoadingVisible] = useState(false);
+  const [successVisible, setSuccessVisible] = useState(false);
+  const [errorVisible, setErrorVisible] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [confirmVisible, setConfirmVisible] = useState(false);
+  const [pageNumber, setPageNumber] = useState(1);  // Current page number
+  const [pageSize] = useState(10);  // Limit per page
+  const [isLoading, setIsLoading] = useState(false);
+  const [totalPages, setTotalPages] = useState(1);  // Total pages available
+  const [selectedId, setSelectedId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');  // State untuk menyimpan query pencarian
-  const [filteredData, setFilteredData] = useState(dummyData);  // Data yang akan ditampilkan setelah di-filter
+  const [filteredData, setFilteredData] = useState([]);  // Data yang akan ditampilkan setelah di-filter
   const navigation = useNavigation();
   
+
+  const fetchDataOrangTua = async () => {
+    setIsLoading(true);
+    const token = await AsyncStorage.getItem('token');
+    try {
+      const response = await axios.get(`${Config.API_URL}/orangtua`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const totalItems = response.data.length;  // Total items
+      setJumlahOrtu(response.data.length);
+      setOrangTua(response.data);
+      setTotalPages(Math.ceil(totalItems / pageSize));  // Calculate total pages
+      setFilteredData(response.data.slice(0, pageSize));  // Set initial data for the first page
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchDataAnak = async () => {
+    setIsLoading(true);
+    const token = await AsyncStorage.getItem('token');
+    try {
+      const response = await axios.get(`${Config.API_URL}/balita`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setJumlahAnak(response.data.length);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchDataAnak();
+      fetchDataOrangTua();
+      return () => { };
+    }, [])
+  );
+  // Function to handle next page
+  const handleNextPage = () => {
+    if (pageNumber < totalPages) {
+      const nextPage = pageNumber + 1;
+      setPageNumber(nextPage);
+      setFilteredData(orangtua.slice((nextPage - 1) * pageSize, nextPage * pageSize));  // Set data for next page
+    }
+  };
+
+  // Function to handle previous page
+  const handlePreviousPage = () => {
+    if (pageNumber > 1) {
+      const prevPage = pageNumber - 1;
+      setPageNumber(prevPage);
+      setFilteredData(orangtua.slice((prevPage - 1) * pageSize, prevPage * pageSize));  // Set data for previous page
+    }
+  };
+
+  const confirmDelete = async () => {
+    console.log(selectedId)
+    const token = await AsyncStorage.getItem('token');
+    try {
+      const response = await axios.delete(`${Config.API_URL}/orangtua/${selectedId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      if (response.status === 204) {
+        setConfirmVisible(false); // Sembunyikan modal
+        fetchDataOrangTua(); // Refresh data setelah penghapusan
+      }
+    } catch (error) {
+      setErrorMessage(`Gagal menghapus data balita. ${error.message}`,);
+      setErrorVisible(true); // Tampilkan modal error
+    }
+  };
+
+  const handleDelete = (id) => {
+    setSelectedId(id); // Simpan ID yang akan dihapus
+    setConfirmVisible(true); // Tampilkan modal konfirmasi
+  };
+
   const handleSearch = (query) => {
     setSearchQuery(query);
     if (query === '') {
-      setFilteredData(dummyData);  // Jika query kosong, tampilkan semua data
+      setFilteredData(orangtua);
     } else {
-      // Filter data sesuai dengan nama balita atau nama ibu
-      const filtered = dummyData.filter((item) =>
-        item.nama_balita.toLowerCase().includes(query.toLowerCase()) ||
-        item.Nama_Ibu.toLowerCase().includes(query.toLowerCase())
+      const filtered = orangtua.filter((item) =>
+        (item.nama_ayah && item.nama_ayah.toLowerCase().includes(query.toLowerCase())) ||
+        (item.nama_ibu && item.nama_ibu.toLowerCase().includes(query.toLowerCase()))
       );
       setFilteredData(filtered);
     }
   };
 
-  const [formData, setFormData] = useState({
-    nikAnak: '',
-    noKK: '',
-    jenisKelamin: '',
-    tempatLahir: '',
-    tanggalLahir: null,
-    beratBadanAwal: '',
-    tinggiBadanAwal: '',
-    riwayatPenyakit: '',
-    riwayatKelahiran: '',
-    keterangan: ''
-  });
+
 
   const handleAddChildPress = () => {
-    setModalVisible(true);
+    navigation.navigate('IbuForm')
   };
 
   const handleInputChange = (name, value) => {
@@ -90,15 +162,15 @@ const DataOrtu = () => {
       <View style={styles.verificationCardContent}>
         <View style={{ flexDirection: 'column', width: '70%' }}>
   
-          <Text style={styles.verificationTextTitle}>{item.nama_balita}</Text>
+          <Text style={styles.verificationTextTitle}>{item.nama_ibu}</Text>
           <View style={{ flexDirection: 'row' }}>
-            <Icon name="user" size={20} color="#16DBCC" />
-            <Text style={styles.verificationText3}>{item.Nama_Ibu}</Text>
+            <Icon name="user" size={20} color="#424F5E" />
+            <Text style={styles.verificationText3}>{item.nama_ayah}</Text>
           </View>
   
           <View style={{ flexDirection: 'row' }}>
-            <Icon name="user" size={20} color="#16DBCC" />
-            <Text style={styles.verificationText3}>{item.Nik_Balita}</Text>
+          <Icon name="id-card" size={20} color="#424F5E" />
+            <Text style={styles.verificationText3}>{item.no_kk}</Text>
           </View>
   
   
@@ -108,17 +180,14 @@ const DataOrtu = () => {
           <View style={{ flexDirection: 'row' }}>
             <TouchableOpacity
               style={styles.editButton}
-              onPress={() => navigation.navigate('DetailOrtu', { item })}
+              onPress={() => navigation.navigate('DetailOrtu', { id :item.id })}
             >
               <Icon name="eye" size={20} color="#16DBCC" />
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.deleteButton}
               onPress={() =>
-                Alert.alert('Confirmation', `Are you sure you want to delete user ${item.username}?`, [
-                  { text: 'Cancel', style: 'cancel' },
-                  { text: 'OK', onPress: () => handleDeleteUser(item.id) },
-                ])
+                handleDelete(item.id)
               }
             >
               <Icon name="trash" size={24} color="#FF6000" />
@@ -153,7 +222,7 @@ const DataOrtu = () => {
                     </View>
                     <View style={styles.cardContent}>
                         <Text style={styles.cardHeaderText}>Jumlah Data Ortu</Text>
-                        <Text style={styles.cardContentText}>1</Text>
+                        <Text style={styles.cardContentText}>{jumlahortu}</Text>
                     </View>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.cardBox}>
@@ -162,14 +231,14 @@ const DataOrtu = () => {
                     </View>
                     <View style={styles.cardContent}>
                         <Text style={styles.cardHeaderText}>Jumlah Data Anak</Text>
-                        <Text style={styles.cardContentText}>2</Text>
+                        <Text style={styles.cardContentText}>{jumlahAnak}</Text>
                     </View>
                 </TouchableOpacity>
             </View>
       <View>
         <FlatList
           data={filteredData}
-          style={{ backgroundColor: '#fff', marginTop: 20, borderRadius: 2 }}
+          style={{ backgroundColor: '#fff', marginVertical: 20, borderRadius: 2,maxHeight: 400}}
           renderItem={renderItem}
           keyExtractor={(item) => item.id.toString()}
         />
@@ -183,6 +252,26 @@ const DataOrtu = () => {
       <TouchableOpacity style={styles.addButton} onPress={handleAddChildPress}>
         <Icon name="plus" size={30} color="white" />
       </TouchableOpacity>
+
+      <View style={styles.paginationContainer}>
+        <TouchableOpacity
+          style={[styles.pageButton, pageNumber === 1 && styles.disabledButton]}
+          onPress={handlePreviousPage}
+          disabled={pageNumber === 1}
+        >
+          <Text style={styles.pageButtonText}><Icon name="angle-left" size={30} color="white"/> </Text>
+        </TouchableOpacity>
+        <Text style={styles.pageInfo}>
+          Page {pageNumber} of {totalPages}
+        </Text>
+        <TouchableOpacity
+          style={[styles.pageButton, pageNumber === totalPages && styles.disabledButton]}
+          onPress={handleNextPage}
+          disabled={pageNumber === totalPages}
+        >
+          <Text style={styles.pageButtonText}><Icon name="angle-right" size={30} color="white"/></Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Print Modal */}
       <Modal
@@ -220,109 +309,31 @@ const DataOrtu = () => {
             </TouchableOpacity>
           </View>
         </View>
+        
       </Modal>
 
-      <Modal
-        transparent={true}
-        visible={modalVisible}
-        animationType="slide"
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Tambah Data Ibu</Text>
+        {/* Modal Loading */}
+        <LoadingModal visible={loadingVisible} />
 
-            <TextInput
-              style={styles.input}
-              placeholder="NIK Ibu"
-              keyboardType="numeric"
-              maxLength={16}
-              placeholderTextColor="gray"
-              value={formData.nikAnak}
-              onChangeText={(value) => handleInputChange('nikAnak', value)}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="No KK"
-              keyboardType="numeric"
-              maxLength={16}
-              placeholderTextColor="gray"
-              value={formData.noKK}
-              onChangeText={(value) => handleInputChange('noKK', value)}
-            />
-            <DropDownPicker
-              open={openIbu}
-              value={formData.jenisKelamin}
-              items={items}
-              setOpen={setOpenIbu}
-              onSelectItem={(item) => setFormData({ ...formData, jenisKelamin: item.value })}
-              setItems={setItems}
-              placeholder="Pilih Jenis Kelamin"
-              containerStyle={styles.dropdownContainer}
-              style={styles.dropdown}
-              dropDownStyle={styles.dropdown}
-            />
-            <View style={{ flexDirection: 'row'}}>
-              <TextInput
-                style={styles.input1}
-                placeholder="Tempat Lahir"
-                value={formData.tempatLahir}
-                onChangeText={(value) => handleInputChange('tempatLahir', value)}
-              />
-              <DatePicker
-                modal
-                style={styles.datePicker}
-                open={isDatePickerOpenIbu} //lita}
-                date={formData.tanggalLahir || new Date()}
-                mode="date"
-                onConfirm={(date) => {
-                  setDatePickerOpenIbu(false);
-                  setFormData({ ...formData, tanggalLahir: date });
-                  console.log('Selected date:', date);  // Log the selected date
-                }}
-                onCancel={() => {
-                  setDatePickerOpenIbu(false);
-                  console.log('Date picker cancelled');
-                }}
-              />
-            </View>
-            <TextInput
-              style={styles.input}
-              placeholder="Berat Badan Awal"
-              value={formData.beratBadanAwal}
-              onChangeText={(value) => handleInputChange('beratBadanAwal', value)}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Tinggi Badan Awal"
-              value={formData.tinggiBadanAwal}
-              onChangeText={(value) => handleInputChange('tinggiBadanAwal', value)}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Riwayat Penyakit"
-              value={formData.riwayatPenyakit}
-              onChangeText={(value) => handleInputChange('riwayatPenyakit', value)}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Riwayat Kelahiran"
-              value={formData.riwayatKelahiran}
-              onChangeText={(value) => handleInputChange('riwayatKelahiran', value)}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Keterangan"
-              value={formData.keterangan}
-              onChangeText={(value) => handleInputChange('keterangan', value)}
-            />
+{/* Modal Sukses */}
+<SuccessModal
+  visible={successVisible}
+  message="Data balita berhasil ditambahkan."
+  onClose={() => setSuccessVisible(false)}
+/>
 
-            <TouchableOpacity style={styles.saveButton} onPress={() => setModalVisible(false)}>
-              <Text style={styles.saveButtonText}>Tambah</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+{/* Modal Error */}
+<ErrorModal
+  visible={errorVisible}
+  message={errorMessage}
+  onClose={() => setErrorVisible(false)}
+/>
+<ConfirmationModal
+  visible={confirmVisible}
+  message="Apakah Anda yakin ingin menghapus data anak ini?"
+  onConfirm={confirmDelete}
+  onCancel={() => setConfirmVisible(false)}
+/>
     </View>
   )
 }
@@ -355,7 +366,8 @@ const styles = StyleSheet.create({
   verificationText3: {
     color: 'black',
     fontFamily: 'Urbanist-Bold',
-    marginBottom: 5,
+    marginBottom: 10,
+    marginLeft: 5,
     fontSize: 12,
     flexWrap: 'wrap',
     width: 150
@@ -370,7 +382,7 @@ const styles = StyleSheet.create({
   verificationTextTitle: {
     color: 'black',
     fontFamily: 'Urbanist-ExtraBold',
-    marginBottom: 2,
+    marginBottom: 5,
     flexWrap: 'wrap',
     fontSize: 15,
   },
@@ -674,6 +686,30 @@ const styles = StyleSheet.create({
     height: 60,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  paginationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 10,
+    marginBottom: 20,
+  },
+  pageButton: {
+    backgroundColor: '#008EB3',
+    padding: 10,
+    borderRadius: 5,
+    marginHorizontal: 25,
+  },
+  pageButtonText: {
+    color: 'white',
+    fontSize: 16,
+  },
+  pageInfo: {
+    fontSize: 12,
+    color: 'black',
+  },
+  disabledButton: {
+    backgroundColor: '#ccc',
   },
   modalOverlay: {
     flex: 1,

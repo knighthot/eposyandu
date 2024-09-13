@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef,lazy, Suspense } from 'react';
 import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { NavigationContainer, useNavigation } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -19,15 +19,13 @@ import IbuScreen from './src/screens/auth/register/IbuScreen';
 import AyahScreen from './src/screens/auth/register/AyahScreen';
 import LansiaScreen from './src/screens/auth/register/LansiaScreen';
 import WaliScreen from './src/screens/auth/register/WaliScreen';
-import Kader from './src/routes/Kader';
-
-//auth end
-
-import Users from './src/routes/Users';
 
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
+const Kader = lazy(() => import('./src/routes/Kader'));
+const Users = lazy(() => import('./src/routes/Users'));
+
 
 const TabButton = ({ name, label, bgColor, activeColor, inactiveColor, onPress, accessibilityState, navigation }) => {
   const focused = accessibilityState.selected;
@@ -46,7 +44,7 @@ const TabButton = ({ name, label, bgColor, activeColor, inactiveColor, onPress, 
  
   navigation = useNavigation();
   const handlePress = () => {
-    if (name === 'bell') {
+    if (name === 'login') {
       navigation.navigate('Login');
     } else {
       onPress();
@@ -112,7 +110,7 @@ const TabNavigator = () => {
             tabBarButton: (props) => (
               <TabButton
                 {...props}
-                name="bell"
+                name="login"
                 label="Login"
                 bgColor="rgba(0, 255, 0, 0.1)"
                 activeColor="#00FF00"
@@ -129,7 +127,7 @@ const TabNavigator = () => {
 
 const App = () => {
   return (
-    <NavigationContainer>
+    <NavigationContainer independent={true} >
       <Stack.Navigator screenOptions={{ headerShown: false }}>
      
     <Stack.Screen name="SplashScreen" component={splashscreen} />
@@ -141,8 +139,20 @@ const App = () => {
         <Stack.Screen name="AyahScreen" component={AyahScreen} />
         <Stack.Screen name="LansiaScreen" component={LansiaScreen} />
         <Stack.Screen name="WaliScreen" component={WaliScreen} />
-        <Stack.Screen name="Kader" component={Kader} /> 
-        <Stack.Screen name="Users" component={Users} />
+        <Stack.Screen name="Kader">
+          {() => (
+            <Suspense fallback={<Text>Loading...</Text>}>
+              <Kader />
+            </Suspense>
+          )}
+        </Stack.Screen>
+        <Stack.Screen name="Users">
+          {() => (
+            <Suspense fallback={<Text>Loading...</Text>}>
+              <Users />
+            </Suspense>
+          )}
+        </Stack.Screen>
 
       </Stack.Navigator>
     </NavigationContainer>

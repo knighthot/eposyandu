@@ -11,7 +11,7 @@ import Header from '../../../components/Header';
 import moment from 'moment';
 import 'moment/locale/id'; // Import Indonesian locale
 import Config from 'react-native-config';
-
+import ErrorModal from '../../../components/modals/ErrorModal';
 moment.locale('id'); // Set the locale to Indonesian
 
 console.log('API_URL:', Config.API_URL);
@@ -21,9 +21,13 @@ const IbuScreen = ({ route }) => {
   const userData = route.params || {};
   const [openIbu, setOpenIbu] = useState(false);
   const [isDatePickerOpenIbu, setDatePickerOpenIbu] = useState(false);
-  const [pekerjaanOptions,setPekerjaanOptions] = useState(false);
-  const [pendidikanOptions,setPendidikanOptions] = useState(false);
-  
+  const [pekerjaanOptions, setPekerjaanOptions] = useState([]);
+  const [pendidikanOptions,setPendidikanOptions] = useState([]);
+  const [openPekerjaanIbu, setOpenPekerjaanIbu] = useState(false);
+const [openPendidikanIbu, setOpenPendidikanIbu] = useState(false);
+const [modalVisible, setModalVisible] = useState(false);
+const [errorMessages, setErrorMessages] = useState([]);
+
   const [ibuData, setIbuData] = useState({
     nik_ibu: '', nama_ibu: '', jenis_kelamin_ibu: '', tempat_lahir_ibu: '', tanggal_lahir_ibu: null,
     alamat_ktp_ibu: '', kelurahan_ktp_ibu: '', kecamatan_ktp_ibu: '', kota_ktp_ibu: '', provinsi_ktp_ibu: '',
@@ -63,9 +67,17 @@ const IbuScreen = ({ route }) => {
   ]);
 
   const handleNext = () => {
+    const errors = validateForm();
+    if (errors.length > 0) {
+      setErrorMessages(errors);
+      setModalVisible(true);
+      return;
+    }
+
     const formattedIbuData = {
       ...ibuData,
       tanggal_lahir_ibu: ibuData.tanggal_lahir_ibu ? ibuData.tanggal_lahir_ibu.toISOString() : null,
+      nik_ibu: !isNaN(parseInt(ibuData.nik_ibu, 10)) ? parseInt(ibuData.nik_ibu, 10) : null,
     };
 
     navigation.navigate('AyahScreen', { ibuData: formattedIbuData, userData });
@@ -77,81 +89,89 @@ const IbuScreen = ({ route }) => {
   };
 
   const validateForm = () => {
-    let errors = {};
-
+    let errors = [];
+  
     if (!ibuData.nik_ibu) {
-      errors.nik_ibu = 'NIK Ibu tidak boleh kosong';
-    } else if (!/^\d{16}$/.test(formData.nik_ibu)) {
-      errors.nik_ibu = 'NIK Ibu harus 16 angka';
+      errors.push('- NIK Ibu tidak boleh kosong');
+    } else if (!/^\d{16}$/.test(ibuData.nik_ibu)) {
+      errors.push('- NIK Ibu harus 16 angka');
     }
+  
     if (!ibuData.nama_ibu) {
-      errors.nama_ibu = 'Nama Ibu tidak boleh kosong';
+      errors.push('- Nama Ibu tidak boleh kosong');
     }
+  
     if (!ibuData.tempat_lahir_ibu) {
-      errors.tempat_lahir_ibu = 'Tempat Lahir Ibu tidak boleh kosong';
+      errors.push('- Tempat Lahir Ibu tidak boleh kosong');
     }
+  
     if (!ibuData.tanggal_lahir_ibu) {
-      errors.tanggal_lahir_ibu = 'Tanggal Lahir tidak boleh kosong';
+      errors.push('- Tanggal Lahir Ibu tidak boleh kosong');
     }
+  
     if (!ibuData.pekerjaan_ibu) {
-      errors.pekerjaan_ibu = 'Pekerjaan Ibu tidak boleh kosong';
+      errors.push('- Pekerjaan Ibu tidak boleh kosong');
     }
+  
     if (!ibuData.pendidikan_ibu) {
-      errors.pendidikan_ibu = 'Pendidikan Ibu tidak boleh kosong';
+      errors.push('- Pendidikan Ibu tidak boleh kosong');
     }
+  
     if (!ibuData.alamat_ktp_ibu) {
-      errors.alamat_ktp_ibu = 'Alamat KTP Ibu tidak boleh kosong';
+      errors.push('- Alamat KTP Ibu tidak boleh kosong');
     }
+  
     if (!ibuData.kelurahan_ktp_ibu) {
-      errors.kelurahan_ktp_ibu = 'Kelurahan KTP Ibu tidak boleh kosong';
+      errors.push('- Kelurahan KTP Ibu tidak boleh kosong');
     }
+  
     if (!ibuData.kecamatan_ktp_ibu) {
-      errors.kecamatan_ktp_ibu = 'Kecamatan KTP Ibu tidak boleh kosong';
+      errors.push('- Kecamatan KTP Ibu tidak boleh kosong');
     }
+  
     if (!ibuData.kota_ktp_ibu) {
-      errors.kota_ktp_ibu = 'Kota KTP Ibu tidak boleh kosong';
+      errors.push('- Kota KTP Ibu tidak boleh kosong');
     }
+  
     if (!ibuData.provinsi_ktp_ibu) {
-      errors.provinsi_ktp_ibu = 'Provinsi KTP Ibu tidak boleh kosong';
+      errors.push('- Provinsi KTP Ibu tidak boleh kosong');
     }
+  
     if (!ibuData.alamat_domisili_ibu) {
-      errors.alamat_domisili_ibu = 'Alamat Domisili Ibu tidak boleh kosong';
+      errors.push('- Alamat Domisili Ibu tidak boleh kosong');
     }
+  
     if (!ibuData.kelurahan_domisili_ibu) {
-      errors.kelurahan_domisili_ibu = 'Kelurahan Domisili Ibu tidak boleh kosong';
+      errors.push('- Kelurahan Domisili Ibu tidak boleh kosong');
     }
+  
     if (!ibuData.kecamatan_domisili_ibu) {
-      errors.kecamatan_domisili_ibu = 'Kecamatan Domisili Ibu tidak boleh kosong';
+      errors.push('- Kecamatan Domisili Ibu tidak boleh kosong');
     }
+  
     if (!ibuData.kota_domisili_ibu) {
-      errors.kota_domisili_ibu = 'Kota Domisili Ibu tidak boleh kosong';
+      errors.push('- Kota Domisili Ibu tidak boleh kosong');
     }
+  
     if (!ibuData.provinsi_domisili_ibu) {
-      errors.provinsi_domisili_ibu = 'Provinsi Domisili Ibu tidak boleh kosong';
+      errors.push('- Provinsi Domisili Ibu tidak boleh kosong');
     }
+  
     if (!ibuData.no_hp_ibu) {
-      errors.no_hp_ibu = 'Nomor HP Ibu tidak boleh kosong';
-    }else if (!/^\d{12}$/.test(ibuData.no_hp_ibu)) {
-      errors.no_hp_ibu = 'Nomor HP Ibu harus 12 angka';
+      errors.push('- Nomor HP Ibu tidak boleh kosong');
+    } else if (!/^\d{12}$/.test(ibuData.no_hp_ibu)) {
+      errors.push('- Nomor HP Ibu harus 12 angka');
     }
-
+  
     if (!ibuData.email_ibu) {
-      errors.email_ibu = 'Email Ibu tidak boleh kosong';
-    }else if (!/\S+@\S+\.\S+/.test(formData.email_ibu)) {
-      errors.email_ibu = 'Email Ibu tidak valid';
+      errors.push('- Email Ibu tidak boleh kosong');
+    } else if (!/\S+@\S+\.\S+/.test(ibuData.email_ibu)) {
+      errors.push('- Email Ibu tidak valid');
     }
-    
-    if (!pekerjaan_ibu) {
-      errors.pekerjaan_ibu = 'Pekerjaan Ibu tidak boleh kosong';
-    }
-
-    if (!pendidikan_ibu) {
-      errors.pendidikan_ibu = 'Pendidikan Ibu tidak boleh kosong';
-    }
-
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
+  
+    return errors;
   };
+  
 
 
 
@@ -162,6 +182,8 @@ const IbuScreen = ({ route }) => {
         <TextInput
           style={styles.input}
           placeholder="NIK Ibu"
+          keyboardType="numeric"
+          maxLength={16}
           placeholderTextColor="#000"
           value={ibuData.nik_ibu}
           onChangeText={(text) => setIbuData({ ...ibuData, nik_ibu: text })}
@@ -294,6 +316,8 @@ const IbuScreen = ({ route }) => {
           style={styles.input}
           placeholder="No. HP Ibu"
           placeholderTextColor="#000"
+          keyboardType="phone-pad"
+          maxLength={12}
           value={ibuData.no_hp_ibu}
           onChangeText={(text) => setIbuData({ ...ibuData, no_hp_ibu: text })}
         />
@@ -301,27 +325,33 @@ const IbuScreen = ({ route }) => {
         <TextInput
           style={styles.input}
           placeholder="Email Ibu"
+          keyboardType="email-address"
           placeholderTextColor="#000"
           value={ibuData.email_ibu}
           onChangeText={(text) => setIbuData({ ...ibuData, email_ibu: text })}
         />
-
-        <TextInput
-          style={styles.input}
-          placeholder="Pekerjaan Ibu"
-          placeholderTextColor="#000"
+  <DropDownPicker
+          open={openPekerjaanIbu}
           value={ibuData.pekerjaan_ibu}
-          onChangeText={(text) => setIbuData({ ...ibuData, pekerjaan_ibu: text })}
+          items={pekerjaanOptions.map(pekerjaan => ({ label: pekerjaan.nama, value: pekerjaan.id }))}
+          setOpen={setOpenPekerjaanIbu}
+          setValue={(value) => setIbuData({ ...ibuData, pekerjaan_ibu: value() })}
+          placeholder="Pilih Pekerjaan Ibu"
+          containerStyle={styles.dropdownContainer}
+          style={styles.dropdown}
         />
-
-        <TextInput
-          style={styles.input}
-          placeholder="Pendidikan Ibu"
-          placeholderTextColor="#000"
+        
+        <DropDownPicker
+          open={openPendidikanIbu}
           value={ibuData.pendidikan_ibu}
-          onChangeText={(text) => setIbuData({ ...ibuData, pendidikan_ibu: text })}
+          items={pendidikanOptions.map(pendidikan => ({ label: pendidikan.nama, value: pendidikan.id }))}
+          setOpen={setOpenPendidikanIbu}
+          setValue={(value) => setIbuData({ ...ibuData, pendidikan_ibu: value() })}
+          placeholder="Pilih Pendidikan Ibu"
+          containerStyle={styles.dropdownContainer}
+          style={styles.dropdown}
         />
-
+        
         <TouchableOpacity style={styles.btnNext} onPress={handleNext}>
           <Text style={styles.btnText}>Lanjut</Text>
         </TouchableOpacity>
@@ -340,6 +370,11 @@ const IbuScreen = ({ route }) => {
           keyExtractor={(item) => item.key}
         />
       </View>
+      <ErrorModal
+        visible={modalVisible}
+        message={errorMessages.join('\n')}
+        onClose={() => setModalVisible(false)}
+      />
     </View>
   );
 };

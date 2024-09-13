@@ -90,12 +90,7 @@ const Dashboard = () => {
                         </View>
                         <Text style={styles.buttonText}>Data PA</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={{ width: '20%' }} onPress={() => navigation.navigate('DataImunisasiAnak')}>
-                        <View style={styles.bottomButton}>
-                            <IconMaterial name="calendar" size={30} color='#F37676' />
-                        </View>
-                        <Text style={styles.buttonText}>Data Imunisasi</Text>
-                    </TouchableOpacity>
+                   
                 </View>
                 <View style={styles.buttonRow}>
                     <TouchableOpacity style={{ width: '20%' }}>

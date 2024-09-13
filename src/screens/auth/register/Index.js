@@ -3,20 +3,42 @@ import React, { useState } from 'react';
 import Logo from '../../../assets/images/logo_posyandu.png';
 import { useNavigation } from '@react-navigation/native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-
+import ErrorModal from '../../../components/modals/ErrorModal';
 const Index = () => {
   const navigation = useNavigation();
   const [passwordVisible, setPasswordVisible] = useState(false);
 
-  const [no_hp, setNoHp] = useState('');
+  const [email, setEmail] = useState('');
   const [nama, setNama] = useState('');
   const [kata_sandi, setKataSandi] = useState('');
 
+  const [modalVisible, setModalVisible] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const handleRegister = () => {
-    // Pass data to Syarat screen
-    navigation.navigate('Syarat', { no_hp: no_hp, nama: nama, kata_sandi: kata_sandi });
-  };
+    let errors = [];
+    // Validate email
+    if (!email) {
+      errors.push('- Email dibutuhkan');
+    }
 
+    // Validate name
+    if (!nama) {
+      errors.push('- Nama dibutuhkan');
+    }
+
+    // Validate password
+    if (!kata_sandi || kata_sandi.length < 6) {
+      errors.push('- Kata sandi harus lebih dari 6 karakter');
+    }
+
+    if (errors.length > 0) {
+      setErrorMessage(errors.join('\n')); // Combine errors into one string with line breaks
+      setModalVisible(true);
+      return;
+    }
+    // All validation passed, navigate to next screen
+    navigation.navigate('Syarat', { email: email, nama: nama, kata_sandi: kata_sandi });
+  };
 
   return (
     <View style={styles.container}>
@@ -27,13 +49,12 @@ const Index = () => {
       <View style={styles.card}>
         <Text style={styles.title}>Daftar E-Posyandu</Text>
         <TextInput
-          placeholder="No Hp"
+          placeholder="Email"
           placeholderTextColor={'#000000'}
           style={styles.input}
-          keyboardType='numeric'
-          value={no_hp}
-          onChangeText={(text) => setNoHp(text)}
-          maxLength={13}
+          keyboardType='email-address'
+          value={email}
+          onChangeText={(text) => setEmail(text)}
         />
         <TextInput
           placeholder="Nama Pengguna"
@@ -59,7 +80,7 @@ const Index = () => {
             />
           </TouchableOpacity>
         </View>
-       
+
         <TouchableOpacity style={styles.button} onPress={handleRegister}>
           <Text style={styles.buttonText}>Daftar</Text>
         </TouchableOpacity>
@@ -70,8 +91,13 @@ const Index = () => {
           <Text style={styles.buttonText}>Masuk</Text>
         </TouchableOpacity>
 
-    
+
       </View>
+      <ErrorModal
+        visible={modalVisible}
+        message={errorMessage}
+        onClose={() => setModalVisible(false)}
+      />
     </View>
   );
 };

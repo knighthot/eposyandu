@@ -1,69 +1,52 @@
-import React from 'react';
+import React,{useEffect,useState} from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, FlatList, ScrollView } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { useNavigation } from '@react-navigation/native';
-
-// Sample data for the children
-const DataAnak = [
-  {
-    id: '1',
-    nama_balita: 'Setia Budi',
-    Nik_balita: '12273872918',
-    umur: '1 tahun, 7 bulan',
-    TempatTanggalLahir: 'Jakarta, 01 Januari 2000',
-    Anak_ke: '1',
-  },
-  {
-    id: '2',
-    nama_balita: 'Setia Budi',
-    Nik_balita: '12273872918',
-    umur: '1 tahun, 7 bulan',
-    TempatTanggalLahir: 'Jakarta, 01 Januari 2000',
-    Anak_ke: '2',
-  },
-  {
-    id: '3',
-    nama_balita: 'Setia Budi',
-    Nik_balita: '12273872918',
-    umur: '1 tahun, 7 bulan',
-    TempatTanggalLahir: 'Jakarta, 01 Januari 2000',
-    Anak_ke: '3',
-  },
-];
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Config from 'react-native-config';
+import moment from 'moment';
 
 // Component to render each item in the FlatList
 const RenderItem = ({ item }) => {
   const navigation = useNavigation();
 
   const handlePress = () => {
-    navigation.navigate('DetailAnak', { dataAnak: item });
+    navigation.navigate('DetailAnak', { id: item.id });
   };
+
+  const calculateAge = (birthDate) => {
+    if (!birthDate) return ''; // Jika tidak ada tanggal lahir
+
+    const now = moment(); // Waktu sekarang
+    const birthMoment = moment(birthDate); // Tanggal lahir
+    const years = now.diff(birthMoment, 'years'); // Selisih dalam tahun
+    const months = now.diff(birthMoment, 'months') % 12; // Sisa bulan setelah dikurangi tahun
+
+    return `${years} tahun, ${months} bulan`;
+  };
+
   return (
     <View style={styles.verificationCard}>
       <View style={styles.verificationCardContent}>
         <View style={{ flexDirection: 'column', width: '70%' }}>
           <Text style={styles.verificationTextTitle}>{item.nama_balita}</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Icon name="user" size={20} color="#16DBCC" />
-            <Text style={styles.verificationText3}>{item.Nik_balita}</Text>
+          <Icon name="id-card" size={20} color="#424F5E" />
+            <Text style={styles.verificationText3}>{item.nik_balita}</Text>
           </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center',marginTop:5 }}>
+            <Icon name="transgender" size={20} color="#424F5E" />
+            <Text style={styles.verificationText3}>{item.jenis_kelamin_balita === 'l' ? 'Laki-Laki' : 'Perempuan'}</Text>
+          </View>
+          
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Icon name="user" size={20} color="#16DBCC" />
-            <Text style={styles.verificationText3}>{item.TempatTanggalLahir}</Text>
+            <Text style={styles.verificationText}>{calculateAge(item.tanggal_lahir_balita)}</Text>
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Text style={styles.verificationText3}>{item.umur}</Text>
-          </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Text style={styles.verificationText3}>Anak ke - {item.Anak_ke}</Text>
-          </View>
+    
         </View>
         <View style={{ flexDirection: 'column', justifyContent: 'center' }}>
-          <TouchableOpacity
-            style={styles.statusButton}
-            onPress={handlePress} 
-           
-          >
+          <TouchableOpacity style={styles.statusButton} onPress={handlePress}>
             <Icon name="eye" size={20} color="#16DBCC" />
           </TouchableOpacity>
         </View>
@@ -73,18 +56,39 @@ const RenderItem = ({ item }) => {
 };
 
 
-const RenderItemIbu = ({ item }) => (
-  
+const RenderItemIbu = ({ item }) => {
+  const [pekerjaanIbu, setPekerjaanIbu] = useState('');
+  const [pendidikanIbu, setPendidikanIbu] = useState('');
+
+  console.log(item.pekerjaan_ibu)
+  const fetchPekerjaanDanPendidikan = async () => {
+    const token = await AsyncStorage.getItem('token');
+    try {
+      const pekerjaanResponse = await axios.get(`${Config.API_URL}/pekerjaan/${item.pekerjaan_ibu}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setPekerjaanIbu(pekerjaanResponse.data.nama);
+
+      const pendidikanResponse = await axios.get(`${Config.API_URL}/pendidikan/${item.pendidikan_ibu}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setPendidikanIbu(pendidikanResponse.data.nama);
+    } catch (error) {
+      console.error('Error fetching pekerjaan or pendidikan:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchPekerjaanDanPendidikan();
+  }, []);
+  return (
   <View style={styles.dataSection}>
    
     <Text style={styles.label}>Nama Ibu</Text>
     <TextInput style={styles.input} value={item.nama_ibu} editable={false} />
 
     <Text style={styles.label}>NIK</Text>
-    <TextInput style={styles.input} value={item.nik_ibu} editable={false} />
-
-    <Text style={styles.label}>Jenis Kelamin</Text>
-    <TextInput style={styles.input} value={item.jenis_kelamin_ibu} editable={false} />
+    <TextInput style={styles.input} value={item.nik_ibu.toString()} editable={false} />
 
     <Text style={styles.label}>Tempat Lahir</Text>
     <TextInput style={styles.input} value={item.tempat_lahir_ibu} editable={false} />
@@ -123,19 +127,21 @@ const RenderItemIbu = ({ item }) => (
     <TextInput style={styles.input} value={item.provinsi_domisili_ibu} editable={false} />
 
     <Text style={styles.label}>Nomor HP</Text>
-    <TextInput style={styles.input} value={item.no_hp_ibu} editable={false} />
+    <TextInput style={styles.input} value={item.no_hp_ibu.toString()} editable={false} />
 
     <Text style={styles.label}>Email</Text>
     <TextInput style={styles.input} value={item.email_ibu} editable={false} />
 
     <Text style={styles.label}>Pekerjaan</Text>
-    <TextInput style={styles.input} value={item.pekerjaan_ibu} editable={false} />
+    <TextInput style={styles.input} value={pekerjaanIbu} editable={false} />
 
     <Text style={styles.label}>Pendidikan</Text>
-    <TextInput style={styles.input} value={item.pendidikan_ibu} editable={false} />
+    <TextInput style={styles.input} value={pendidikanIbu} editable={false} />
 
   </View>
+  
 );
+}
 
 // Komponen Biodata untuk menampilkan data ibu dalam bentuk FlatList
 const BiodataSectionIbu = ({ DataIbu }) => {
@@ -153,65 +159,93 @@ const BiodataSectionIbu = ({ DataIbu }) => {
 
 // Component for displaying father's biodata
 
-const RenderItemAyah = ({ item }) => (
+const RenderItemAyah = ({ item }) =>{
+  const [pekerjaanAyah, setPekerjaanAyah] = useState('');
+  const [pendidikanAyah, setPendidikanAyah] = useState('');
+
+  // Fetch pekerjaan dan pendidikan dari ID
+  const fetchPekerjaanDanPendidikan = async () => {
+    const token = await AsyncStorage.getItem('token');
+    try {
+      const pekerjaanResponse = await axios.get(`${Config.API_URL}/pekerjaan/${item.pekerjaan_ayah}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setPekerjaanAyah(pekerjaanResponse.data.nama);
+
+      const pendidikanResponse = await axios.get(`${Config.API_URL}/pendidikan/${item.pendidikan_ayah}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setPendidikanAyah(pendidikanResponse.data.nama);
+    } catch (error) {
+      console.error('Error fetching pekerjaan or pendidikan:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchPekerjaanDanPendidikan();
+  }, []);
+
+  return (
+    
   <View style={styles.dataSection}>
    
   <Text style={styles.label}>Nama Ayah</Text>
-  <TextInput style={styles.input} value={item.DataAyah.nama_ayah} editable={false} />
+  <TextInput style={styles.input} value={item.nama_ayah} editable={false} />
 
   <Text style={styles.label}>NIK</Text>
-  <TextInput style={styles.input} value={item.DataAyah.nik_ayah} editable={false} />
+  <TextInput style={styles.input} value={item.nik_ayah.toString()} editable={false} />
 
   <Text style={styles.label}>Tempat Lahir</Text>
-  <TextInput style={styles.input} value={item.DataAyah.tempat_lahir_ayah} editable={false} />
+  <TextInput style={styles.input} value={item.tempat_lahir_ayah} editable={false} />
 
   <Text style={styles.label}>Tanggal Lahir</Text>
-  <TextInput style={styles.input} value={item.DataAyah.tanggal_lahir_ayah} editable={false} />
+  <TextInput style={styles.input} value={item.tanggal_lahir_ayah} editable={false} />
 
   <Text style={styles.label}>Alamat KTP</Text>
-  <TextInput style={styles.input} value={item.DataAyah.alamat_ktp_ayah} editable={false} />
+  <TextInput style={styles.input} value={item.alamat_ktp_ayah} editable={false} />
 
   <Text style={styles.label}>Kelurahan KTP</Text>
-  <TextInput style={styles.input} value={item.DataAyah.kelurahan_ktp_ayah} editable={false} />
+  <TextInput style={styles.input} value={item.kelurahan_ktp_ayah} editable={false} />
 
   <Text style={styles.label}>Kecamatan KTP</Text>
-  <TextInput style={styles.input} value={item.DataAyah.kecamatan_ktp_ayah} editable={false} />
+  <TextInput style={styles.input} value={item.kecamatan_ktp_ayah} editable={false} />
 
   <Text style={styles.label}>Kota KTP</Text>
-  <TextInput style={styles.input} value={item.DataAyah.kota_ktp_ayah} editable={false} />
+  <TextInput style={styles.input} value={item.kota_ktp_ayah} editable={false} />
 
   <Text style={styles.label}>Provinsi KTP</Text>
-  <TextInput style={styles.input} value={item.DataAyah.provinsi_ktp_ayah} editable={false} />
+  <TextInput style={styles.input} value={item.provinsi_ktp_ayah} editable={false} />
 
   <Text style={styles.label}>Alamat Domisili</Text>
-  <TextInput style={styles.input} value={item.DataAyah.alamat_domisili_ayah} editable={false} />
+  <TextInput style={styles.input} value={item.alamat_domisili_ayah} editable={false} />
 
   <Text style={styles.label}>Kelurahan Domisili</Text>
-  <TextInput style={styles.input} value={item.DataAyah.kelurahan_domisili_ayah} editable={false} />
+  <TextInput style={styles.input} value={item.kelurahan_domisili_ayah} editable={false} />
 
   <Text style={styles.label}>Kecamatan Domisili</Text>
-  <TextInput style={styles.input} value={item.DataAyah.kecamatan_domisili_ayah} editable={false} />
+  <TextInput style={styles.input} value={item.kecamatan_domisili_ayah} editable={false} />
 
   <Text style={styles.label}>Kota Domisili</Text>
-  <TextInput style={styles.input} value={item.DataAyah.kota_domisili_ayah} editable={false} />
+  <TextInput style={styles.input} value={item.kota_domisili_ayah} editable={false} />
 
   <Text style={styles.label}>Provinsi Domisili</Text>
-  <TextInput style={styles.input} value={item.DataAyah.provinsi_domisili_ayah} editable={false} />
+  <TextInput style={styles.input} value={item.provinsi_domisili_ayah} editable={false} />
 
   <Text style={styles.label}>Nomor HP</Text>
-  <TextInput style={styles.input} value={item.DataAyah.no_hp_ayah} editable={false} />
+  <TextInput style={styles.input} value={item.no_hp_ayah.toString()} editable={false} />
 
   <Text style={styles.label}>Email</Text>
-  <TextInput style={styles.input} value={item.DataAyah.email_ayah} editable={false} />
+  <TextInput style={styles.input} value={item.email_ayah} editable={false} />
 
   <Text style={styles.label}>Pekerjaan</Text>
-  <TextInput style={styles.input} value={item.DataAyah.pekerjaan_ayah} editable={false} />
+  <TextInput style={styles.input} value={pekerjaanAyah} editable={false} />
 
   <Text style={styles.label}>Pendidikan</Text>
-  <TextInput style={styles.input} value={item.DataAyah.pendidikan_ayah} editable={false} />
+  <TextInput style={styles.input} value={pendidikanAyah} editable={false} />
 
 </View>
 );
+};
 
 // Component Biodata to display father's data in a FlatList
 const BiodataSectionAyah = ({ DataAyah }) => {
@@ -227,14 +261,48 @@ return (
 };
 
 // Component for displaying the list of children
-const DataAnakSection = () => (
-   <ScrollView style={styles.dataSection}>
-    {DataAnak.map((item) => (
-      <RenderItem key={item.id} item={item} />
-    ))}
-  </ScrollView>
-);
+const DataAnakSection = ({ orangtuaId }) => {
+  console.log('Id OrangTua:', orangtuaId);
+  const [dataAnak, setDataAnak] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
+  const fetchDataAnak = async () => {
+    const token = await AsyncStorage.getItem('token');
+    try {
+      const response = await axios.get(`${Config.API_URL}/balita`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      // Filter anak-anak berdasarkan orangtuaId
+      const filteredAnak = response.data.filter((anak) => anak.orangtua === orangtuaId);
+      setDataAnak(filteredAnak);
+    } catch (error) {
+      console.error('Error fetching data anak:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDataAnak();
+  }, [orangtuaId]);
+
+  if (isLoading) {
+    return <Text>Loading...</Text>;
+  }
+
+  if (dataAnak.length === 0) {
+    return <Text>No data available</Text>;
+  }
+
+  return (
+    <ScrollView style={styles.dataSection}>
+      {dataAnak.map((item) => (
+        <RenderItem key={item.id} item={item} />
+      ))}
+    </ScrollView>
+  );
+};
 export { BiodataSectionIbu, DataAnakSection, BiodataSectionAyah };
 
 const styles = StyleSheet.create({
@@ -271,8 +339,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     padding: 10,
     marginHorizontal: 10,
-
-    marginVertical: 10,
+    marginBottom: 10,
   },
   noDataText: {
     textAlign: 'center',
@@ -288,7 +355,7 @@ const styles = StyleSheet.create({
   verificationText: {
     color: 'black',
     fontFamily: 'Urbanist-Reguler',
-    marginBottom: 5,
+    marginTop: 5,
     fontSize: 12,
     flexWrap: 'wrap',
   },
@@ -296,14 +363,16 @@ const styles = StyleSheet.create({
     color: 'black',
     fontFamily: 'Urbanist-Bold',
     marginBottom: 5,
+    marginLeft: 5,
     fontSize: 12,
     flexWrap: 'wrap',
     width: 150,
   },
   verificationTextTitle: {
     color: 'black',
+    fontWeight: 'bold',
     fontFamily: 'Urbanist-ExtraBold',
-    marginBottom: 2,
+    marginBottom: 10,
     flexWrap: 'wrap',
     fontSize: 15,
   },

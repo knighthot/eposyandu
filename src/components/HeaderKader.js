@@ -11,7 +11,7 @@ const HeaderKader = () => {
       <TouchableOpacity onPress={() => navigation.openDrawer()}>
         <MaterialCommunityIcons name="menu" size={28} color="#0C1A42" />
       </TouchableOpacity>
-      <Text style={styles.headerTitle}>Kader</Text>
+      <Text style={styles.headerTitle}>E-Posyandu</Text>
       <Image
         source={{ uri: 'https://example.com/profile-pic.png' }} // Replace with your image URL
         style={styles.profileImage}

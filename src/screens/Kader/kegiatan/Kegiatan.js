@@ -1,95 +1,99 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList, Modal, TextInput } from 'react-native'
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, Modal, TextInput, Alert } from 'react-native';
 import moment from 'moment';
-import IconMaterial from 'react-native-vector-icons/MaterialCommunityIcons';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import DropDownPicker from 'react-native-dropdown-picker';
 import DatePicker from 'react-native-date-picker';
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react';
 import { useNavigation } from '@react-navigation/native';
-
-const dummyKegiatan = [
-  {
-   id: '1',
-   nama_kegiatan: 'Kegiatan 1',
-   jenis_kegiatan : 'balita',
-   tanggal_kegiatan : 'rabu, 11 November 2024',
-   deskripsi : "Lorem ipsum odor amet, consectetuer adipiscing elit. Urna ad convallis posuere enim dolor est dignissim posuere. Nascetur vehicula purus; mollis ullamcorper rutrum interdum habitasse. "
-  },
-  {
-   id: '2',
-   nama_kegiatan: 'Kegiatan 2',
-   jenis_kegiatan : 'lansia',
-   tanggal_kegiatan : 'rabu, 11 November 2024',
-   deskripsi : "Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Urna ad convallis posuere enim dolor est dignissim posuere. Nascetur vehicula purus; mollis ullamcorper rutrum interdum habitasse. "
-  },
-
-
-];
-
-
-
-
+import axios from 'axios';  // Import Axios
+import Config from 'react-native-config';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 const Kegiatan = () => {
   const navigation = useNavigation();
   const [printModalVisible, setPrintModalVisible] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
-  const [openBalita, setOpenBalita] = useState(false);
-  const [isDatePickerOpenBalita, setDatePickerOpenBalita] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');  // State untuk menyimpan query pencarian
-  const [filteredData, setFilteredData] = useState(dummyKegiatan);  // Data yang akan ditampilkan setelah di-filter
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [openDropdown, setOpenDropdown] = useState(false);
+  const [isDatePickerOpen, setDatePickerOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredData, setFilteredData] = useState([]);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [formData, setFormData] = useState({
+    nama_kegiatan: '',
+    hari_tanggal: '',
+    jenisKegiatan: '',
+    deskripsi: '',
+  });
 
-  const [items, setItems] = useState([
-    { label: 'Laki-Laki', value: 'l' },
-    { label: 'Perempuan', value: 'P' }
-  ]);
+  // Fetch kegiatan from backend
+  useEffect(() => {
+    fetchKegiatan();
+  }, []);
 
+  const fetchKegiatan = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) {
+        throw new Error('Token is missing');
+      }
   
+      const response = await axios.get(`${Config.API_URL}/kegiatan`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setFilteredData(response.data);
+    } catch (error) {
+      console.error('Error fetching kegiatan:', error);
+      Alert.alert('Error', 'Failed to fetch kegiatan data.');
+    }
+  };
+  
+
   const handleSearch = (query) => {
     setSearchQuery(query);
     if (query === '') {
-      setFilteredData(dummyData);  // Jika query kosong, tampilkan semua data
+      fetchKegiatan();
     } else {
-      // Filter data sesuai dengan nama balita atau nama ibu
-      const filtered = dummyKegiatan.filter((item) =>
-        item.nama_kegiatan.toLowerCase().includes(query.toLowerCase()) ||
-        item.jenis_kegiatan.toLowerCase().includes(query.toLowerCase())
+      const filtered = filteredData.filter((item) =>
+        item.nama.toLowerCase().includes(query.toLowerCase()) ||
+        item.jenis.toLowerCase().includes(query.toLowerCase())
       );
       setFilteredData(filtered);
     }
   };
 
   const renderItem = ({ item }) => (
-  
-    <View style={styles.verificationCard} >
+    <View style={styles.verificationCard}>
       <View style={styles.verificationCardContent}>
         <View style={{ flexDirection: 'column', width: '55%' }}>
-          <Text style={styles.verificationTextTitle}>{item.nama_kegiatan}</Text>
-          <Text style={styles.verificationText}>jenis kegiatan</Text>
-           <Text style={styles.verificationText3}>{item.jenis_kegiatan}</Text>
-           <Text style={styles.verificationText3}>{item.tanggal_kegiatan}</Text>
-
-  
-
+          <Text style={styles.verificationTextTitle}>{item.nama}</Text>
+          <Text style={styles.verificationText}>Jenis kegiatan</Text>
+          <Text style={styles.verificationText3}>{item.jenis}</Text>
+          <Text style={styles.verificationText}>Tanggal kegiatan</Text>
+          <Text style={styles.verificationText3}>{moment(item.tanggal).format('dddd, DD MMMM YYYY')}</Text>
         </View>
-        <View style={{ flexDirection: 'column', top: 10, }}>
-        <Text style={styles.verificationText3}>{item.deskripsi}</Text>
-          <View style={{ flexDirection: 'row' }}>
+        <View style={{ flexDirection: 'column', top: 10 }}>
+          <Text style={styles.verificationText3} numberOfLines={6} ellipsizeMode="tail">
+            {item.deskripsi}
+          </Text>
+          <View style={styles.buttonContainer}>
             <TouchableOpacity
               style={styles.editButton}
-              onPress={() => navigation.navigate('DetailAnak', { item })}
+              onPress={() => handleEditKegiatan(item)}
             >
-              <Icon name="eye" size={20} color="#16DBCC" />
+              <Icon name="pencil" size={20} color="white" />
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.deleteButton}
               onPress={() =>
-                Alert.alert('Confirmation', `Are you sure you want to delete user ${item.username}?`, [
+                Alert.alert('Confirmation', `Are you sure you want to delete this item?`, [
                   { text: 'Cancel', style: 'cancel' },
-                  { text: 'OK', onPress: () => handleDeleteUser(item.id) },
+                  { text: 'OK', onPress: () => handleDeleteKegiatan(item.id) },
                 ])
               }
             >
-              <Icon name="trash" size={24} color="#FF6000" />
+              <Icon name="trash" size={24} color="#FF0000" />
             </TouchableOpacity>
           </View>
         </View>
@@ -97,20 +101,13 @@ const Kegiatan = () => {
     </View>
   );
 
-  const [formData, setFormData] = useState({
-    nikAnak: '',
-    noKK: '',
-    jenisKelamin: '',
-    tempatLahir: '',
-    tanggalLahir: null,
-    beratBadanAwal: '',
-    tinggiBadanAwal: '',
-    riwayatPenyakit: '',
-    riwayatKelahiran: '',
-    keterangan: ''
-  });
-
-  const handleAddChildPress = () => {
+  const handleAddKegiatanPress = () => {
+    setFormData({
+      nama_kegiatan: '',
+      hari_tanggal: '',
+      jenisKegiatan: '',
+      deskripsi: '',
+    });
     setModalVisible(true);
   };
 
@@ -118,208 +115,233 @@ const Kegiatan = () => {
     setFormData({ ...formData, [name]: value });
   };
 
-
-  const handlePrintPress = () => {
-    setPrintModalVisible(true);
+  const handleAddSubmit = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) {
+        throw new Error('Token is missing');
+      }
+  
+      await axios.post(
+        `${Config.API_URL}/kegiatan`,
+        {
+          nama: formData.nama_kegiatan,
+          tanggal: moment(formData.hari_tanggal, 'dddd, DD MMMM YYYY').toISOString(),
+          jenis: formData.jenisKegiatan,
+          deskripsi: formData.deskripsi,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      fetchKegiatan();
+      setModalVisible(false);
+    } catch (error) {
+      console.error('Error details:', error);
+      
+      const errorMessage = error.response?.data?.message || error.message || 'Unknown error occurred';
+      Alert.alert('Error', errorMessage);
+    }
   };
+  
+
+
+  const handleEditKegiatan = (item) => {
+    setSelectedItem(item);
+    setFormData({
+      nama_kegiatan: item.nama_kegiatan,
+      hari_tanggal: moment(item.tanggal_kegiatan).format('dddd, DD MMMM YYYY'),
+      jenisKegiatan: item.jenis_kegiatan,
+      deskripsi: item.deskripsi,
+    });
+    setEditModalVisible(true);
+  };
+
+  const handleEditSubmit = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) {
+        throw new Error('Token is missing');
+      }
+  
+      await axios.put(
+        `${Config.API_URL}/kegiatan/${selectedItem.id}`,
+        {
+          nama: formData.nama_kegiatan,
+          tanggal: moment(formData.hari_tanggal, 'dddd, DD MMMM YYYY').toISOString(),
+          jenis: formData.jenisKegiatan,
+          deskripsi: formData.deskripsi,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      fetchKegiatan();
+      setEditModalVisible(false);
+    } catch (error) {
+      console.error('Error details:', error);
+      
+      const errorMessage = error.response?.data?.message || error.message || 'Unknown error occurred';
+      Alert.alert('Error', errorMessage);
+    }
+  };
+  
+
+  const handleDeleteKegiatan = async (id) => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) {
+        throw new Error('Token is missing');
+      }
+  
+      await axios.delete(`${Config.API_URL}/kegiatan/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      fetchKegiatan();
+    } catch (error) {
+      console.error('Error details:', error);
+  
+      const errorMessage = error.response?.data?.message || error.message || 'Unknown error occurred';
+      Alert.alert('Error', errorMessage);
+    }
+  };
+  
 
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F5F7FA' }}>
-  
       {/* Search Input */}
-      <View style={{backgroundColor: 'white', justifyContent: 'center', alignItems: 'center',paddingBottom: 10}}>
-      <View style={styles.searchContainer}>
-        <Icon name="search" size={20} color="#718EBF" style={styles.searchIcon} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Cari balita atau nama ibu"
-          placeholderTextColor={'#718EBF'}
-          value={searchQuery}
-          onChangeText={handleSearch}
-        />
-      </View>
-      </View>
-     
-      <View style={{padding: 10}}>
-        <FlatList
-          data={filteredData}
-          style={{ marginTop: 20, borderRadius: 20 ,maxHeight: 400 }}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.id.toString()}
-        />
+      <View style={{ backgroundColor: 'white', justifyContent: 'center', alignItems: 'center', paddingBottom: 10 }}>
+        <View style={styles.searchContainer}>
+          <Icon name="search" size={20} color="#718EBF" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Cari kegiatan "
+            placeholderTextColor={'#718EBF'}
+            value={searchQuery}
+            onChangeText={handleSearch}
+          />
+        </View>
       </View>
 
-      <TouchableOpacity style={styles.printButton} onPress={handlePrintPress}>
+      <FlatList
+        data={filteredData}
+        style={styles.flatList}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id.toString()}
+      />
+
+      <TouchableOpacity style={styles.printButton} onPress={() => {}}>
         <Icon name="print" size={30} color="white" />
       </TouchableOpacity>
 
-      {/* Add Child Button */}
-      <TouchableOpacity style={styles.addButton} onPress={handleAddChildPress}>
+      <TouchableOpacity style={styles.addButton} onPress={handleAddKegiatanPress}>
         <Icon name="plus" size={30} color="white" />
       </TouchableOpacity>
 
-      {/* Print Modal */}
+      {/* Add/Edit Kegiatan Modal */}
       <Modal
         transparent={true}
-        visible={printModalVisible}
+        visible={modalVisible || editModalVisible}
         animationType="slide"
-        onRequestClose={() => setPrintModalVisible(false)}
+        onRequestClose={() => {
+          setModalVisible(false);
+          setEditModalVisible(false);
+        }}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Cetak Data</Text>
-            <TouchableOpacity
-              style={styles.modalButton}
-              onPress={() => {
-                // Implement Print Option 1
-                setPrintModalVisible(false);
-              }}
-            >
-              <Text style={styles.modalButtonText}>Cetak Semua Data Anak</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.modalButton}
-              onPress={() => {
-                // Implement Print Option 1
-                setPrintModalVisible(false);
-              }}
-            >
-              <Text style={styles.modalButtonText}>Cetak Data Anak Laki-Laki</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.modalButton}
-              onPress={() => {
-                // Implement Print Option 2
-                setPrintModalVisible(false);
-              }}
-            >
-              <Text style={styles.modalButtonText}>Cetak  Data Anak Perempuan</Text>
-            </TouchableOpacity>
-          
-          </View>
-        </View>
-      </Modal>
-
-      <Modal
-        transparent={true}
-        visible={modalVisible}
-        animationType="slide"
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Tambah Data Anak</Text>
+            <Text style={styles.modalTitle}>
+              {editModalVisible ? 'Edit Kegiatan' : 'Tambah Kegiatan'}
+            </Text>
 
             <TextInput
               style={styles.input}
-              placeholder="NIK Anak"
-              keyboardType="numeric"
-              maxLength={16}
+              placeholder="Nama Kegiatan"
               placeholderTextColor="gray"
-              value={formData.nikAnak}
-              onChangeText={(value) => handleInputChange('nikAnak', value)}
+              value={formData.nama_kegiatan}
+              onChangeText={(text) => handleInputChange('nama_kegiatan', text)}
             />
-            <TextInput
-              style={styles.input}
-              placeholder="No KK"
-              keyboardType="numeric"
-              maxLength={16}
-              placeholderTextColor="gray"
-              value={formData.noKK}
-              onChangeText={(value) => handleInputChange('noKK', value)}
-            />
-            <DropDownPicker
-              open={openBalita}
-              value={formData.jenisKelamin}
-              items={items}
-              setOpen={setOpenBalita}
-              onSelectItem={(item) => setFormData({ ...formData, jenisKelamin: item.value })}
-              setItems={setItems}
-              placeholder="Pilih Jenis Kelamin"
-              containerStyle={styles.dropdownContainer}
-              style={styles.dropdown}
-              dropDownStyle={styles.dropdown}
-            />
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+
+            <TouchableOpacity onPress={() => setDatePickerOpen(true)}>
               <TextInput
-                style={styles.input1}
-                 placeholderTextColor="gray"
-                placeholder="Tempat Lahir"
-                value={formData.tempatLahir}
-                onChangeText={(value) => handleInputChange('tempatLahir', value)}
+                style={styles.input}
+                placeholder="Tanggal Kegiatan"
+                placeholderTextColor="gray"
+                value={formData.hari_tanggal}
+                editable={false}
               />
-              <TouchableOpacity
-                style={styles.datePickerButton}
-                onPress={() => setDatePickerOpenBalita(true)}>
-                <Text style={styles.datePickerButtonText}>
-                  {formData.tanggalLahir ? moment(formData.tanggalLahir).format('DD/MM/YYYY') : 'Tanggal Lahir'}
-                </Text>
-              </TouchableOpacity>
-              <DatePicker
-                modal
-                style={styles.datePicker}
-                open={isDatePickerOpenBalita} //lita}
-                date={formData.tanggalLahir || new Date()}
-                mode="date"
-                onConfirm={(date) => {
-                  setDatePickerOpenBalita(false);
-                  setFormData({ ...formData, tanggalLahir: date });
-                  console.log('Selected date:', date);  // Log the selected date
-                }}
-                onCancel={() => {
-                  setDatePickerOpenBalita(false);
-                  console.log('Date picker cancelled');
-                }}
-              />
-            </View>
-            <TextInput
-             placeholderTextColor="gray"
-              style={styles.input}
-              placeholder="Berat Badan Awal"
-              value={formData.beratBadanAwal}
-              onChangeText={(value) => handleInputChange('beratBadanAwal', value)}
-            />
-            <TextInput
-              style={styles.input}
-               placeholderTextColor="gray"
-              placeholder="Tinggi Badan Awal"
-              value={formData.tinggiBadanAwal}
-              onChangeText={(value) => handleInputChange('tinggiBadanAwal', value)}
-            />
-            <TextInput
-              style={styles.input}
-               placeholderTextColor="gray"
-              placeholder="Riwayat Penyakit"
-              value={formData.riwayatPenyakit}
-              onChangeText={(value) => handleInputChange('riwayatPenyakit', value)}
-            />
-            <TextInput
-              style={styles.input}
-               placeholderTextColor="gray"
-              placeholder="Riwayat Kelahiran"
-              value={formData.riwayatKelahiran}
-              onChangeText={(value) => handleInputChange('riwayatKelahiran', value)}
-            />
-            <TextInput
-              style={styles.input}
-               placeholderTextColor="gray"
-              placeholder="Keterangan"
-              value={formData.keterangan}
-              onChangeText={(value) => handleInputChange('keterangan', value)}
+            </TouchableOpacity>
+
+            <DropDownPicker
+              open={openDropdown}
+              value={formData.jenisKegiatan}
+              items={[
+                { label: 'Balita', value: 'balita' },
+                { label: 'Lansia', value: 'lansia' },
+              ]}
+              setOpen={setOpenDropdown}
+              setValue={(value) => handleInputChange('jenisKegiatan', value())}
+              placeholder="Pilih Jenis Kegiatan"
+              style={styles.dropdown}
             />
 
-            <TouchableOpacity style={styles.saveButton} onPress={() => setModalVisible(false)}>
-              <Text style={styles.saveButtonText}>Tambah</Text>
-            </TouchableOpacity>
+            <TextInput
+              style={styles.input}
+              placeholder="Deskripsi Kegiatan"
+              placeholderTextColor="gray"
+              value={formData.deskripsi}
+              onChangeText={(text) => handleInputChange('deskripsi', text)}
+              multiline
+              numberOfLines={4}
+            />
+
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={() => {
+                  if (editModalVisible) {
+                    handleEditSubmit();
+                  } else {
+                    handleAddSubmit();
+                  }
+                }}
+              >
+                <Text style={styles.modalButtonText}>{editModalVisible ? 'Simpan' : 'Tambah'}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={() => {
+                  setModalVisible(false);
+                  setEditModalVisible(false);
+                }}
+              >
+                <Text style={styles.modalButtonText}>Batal</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
-    </View>
-  )
-}
 
+      <DatePicker
+        modal
+        open={isDatePickerOpen}
+        date={new Date()}
+        onConfirm={(date) => {
+          setDatePickerOpen(false);
+          handleInputChange('hari_tanggal', moment(date).format('dddd, DD MMMM YYYY'));
+        }}
+        onCancel={() => setDatePickerOpen(false)}
+      />
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   verificationCard: {
@@ -332,12 +354,14 @@ const styles = StyleSheet.create({
     padding: 10,
     marginHorizontal: 10,
     flex: 1,
-    marginVertical: 10
+    marginVertical: 10,
+    position: 'relative'
   },
   verificationCardContent: {
     margin: 10,
+    height:120,
     flexDirection: 'row',
-
+    position: 'relative',
   },
   saveButton: {
     backgroundColor: '#008EB3',
@@ -357,8 +381,6 @@ const styles = StyleSheet.create({
   verificationText: {
     color: 'gray',
     fontFamily: 'Urbanist-Reguler',
-    marginBottom: 5,
-
     fontSize: 12,
     flexWrap: 'wrap',
   },
@@ -366,6 +388,7 @@ const styles = StyleSheet.create({
     color: 'black',
     fontFamily: 'Urbanist-Bold',
     marginBottom: 5,
+    
     fontSize: 12,
     flexWrap: 'wrap',
     width: 150
@@ -388,8 +411,9 @@ const styles = StyleSheet.create({
  
   buttonContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '50%',
+    position: 'absolute',
+    bottom: 10,
+    flex:1,
   },
   button: {
     width: '45%',
@@ -522,7 +546,7 @@ const styles = StyleSheet.create({
     height: 40,
     left: 10,
     position: 'absolute',
-    backgroundColor: '#DCFAF8',
+    backgroundColor: '#008EB3',
   },
   deleteButton: {
     paddingVertical: 8,
@@ -531,7 +555,7 @@ const styles = StyleSheet.create({
   
     position: 'absolute',
     borderRadius: 50,
-    backgroundColor: '#FFDBC6',
+    backgroundColor: '#FFE0E0',
     paddingHorizontal: 12,
   },
   modalTitle: {
@@ -631,6 +655,7 @@ const styles = StyleSheet.create({
   modalContainer: {
     width: '95%',
     padding: 20,
+    height: 450,
     backgroundColor: 'white',
     borderRadius: 10,
     color: 'black',
@@ -645,6 +670,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   modalButton: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 30,
+    flex:1,
     width: '100%',
     padding: 10,
     backgroundColor: '#008EB3',
@@ -669,7 +698,6 @@ const styles = StyleSheet.create({
     borderColor: '#ccc',
     width: 50,
     height: 50,
-
   },
   datePickerText: {
     color: '#000',
@@ -679,7 +707,7 @@ const styles = StyleSheet.create({
     borderColor: '#ccc',
     marginBottom: 10,
     height: 50,
-    width: 150,
+   width: '100%',
     borderRadius: 10,
     justifyContent: 'center',
   },
