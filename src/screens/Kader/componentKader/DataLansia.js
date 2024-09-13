@@ -1,10 +1,11 @@
 import React,{ useState,useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, FlatList,ScrollView } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import moment from 'moment';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Config from 'react-native-config';
 import axios from 'axios';
+import { useNavigation } from '@react-navigation/native';
 // Dummy data for pemeriksaan lansia (you can replace this with real data)
 const pemeriksaanLansiaData = [
   {
@@ -148,6 +149,35 @@ const BiodataLansiaSection = ({ dataLansia }) => {
 
 // Biodata Wali Section
 const BiodataWaliSection = ({ dataWali }) => {
+  const [pekerjaanWali, setPekerjaanWali] = useState('');
+  const [pendidikanWali, setPendidikanWali] = useState('');
+
+  // Fungsi untuk mengambil pekerjaan dan pendidikan berdasarkan ID
+  const fetchPekerjaanDanPendidikan = async () => {
+    const token = await AsyncStorage.getItem('token');
+    try {
+      // Fetch pekerjaan berdasarkan ID pekerjaan Wali
+      const pekerjaanResponse = await axios.get(`${Config.API_URL}/pekerjaan/${dataWali.pekerjaan_wali}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setPekerjaanWali(pekerjaanResponse.data.nama);
+
+      // Fetch pendidikan berdasarkan ID pendidikan Wali
+      const pendidikanResponse = await axios.get(`${Config.API_URL}/pendidikan/${dataWali.pendidikan_wali}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setPendidikanWali(pendidikanResponse.data.nama);
+    } catch (error) {
+      console.error('Error fetching pekerjaan and pendidikan:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (dataWali) {
+      fetchPekerjaanDanPendidikan();
+    }
+  }, [dataWali]);
+
   return (
     <View style={styles.dataSection}>
       <Text style={styles.label}>Nama Wali</Text>
@@ -168,14 +198,44 @@ const BiodataWaliSection = ({ dataWali }) => {
       <Text style={styles.label}>Alamat KTP</Text>
       <TextInput style={styles.input} value={dataWali?.alamat_ktp_wali || ''} editable={false} />
 
+      <Text style={styles.label}>Kelurahan KTP</Text>
+      <TextInput style={styles.input} value={dataWali?.kelurahan_ktp_wali || ''} editable={false} />
+
+      <Text style={styles.label}>Kecamatan KTP</Text>
+      <TextInput style={styles.input} value={dataWali?.kecamatan_ktp_wali || ''} editable={false} />
+
+      <Text style={styles.label}>Kota KTP</Text>
+      <TextInput style={styles.input} value={dataWali?.kota_ktp_wali || ''} editable={false} />
+
+      <Text style={styles.label}>Provinsi KTP</Text>
+      <TextInput style={styles.input} value={dataWali?.provinsi_ktp_wali || ''} editable={false} />
+
       <Text style={styles.label}>Alamat Domisili</Text>
       <TextInput style={styles.input} value={dataWali?.alamat_domisili_wali || ''} editable={false} />
 
+      <Text style={styles.label}>Kelurahan Domisili</Text>
+      <TextInput style={styles.input} value={dataWali?.kelurahan_domisili_wali || ''} editable={false} />
+
+      <Text style={styles.label}>Kecamatan Domisili</Text>
+      <TextInput style={styles.input} value={dataWali?.kecamatan_domisili_wali || ''} editable={false} />
+
+      <Text style={styles.label}>Kota Domisili</Text>
+      <TextInput style={styles.input} value={dataWali?.kota_domisili_wali || ''} editable={false} />
+
+      <Text style={styles.label}>Provinsi Domisili</Text>
+      <TextInput style={styles.input} value={dataWali?.provinsi_domisili_wali || ''} editable={false} />
+
       <Text style={styles.label}>No HP</Text>
-      <TextInput style={styles.input} value={dataWali?.no_hp_wali || ''} editable={false} />
+      <TextInput style={styles.input} value={dataWali?.no_hp_wali.toString() || ''} editable={false} />
 
       <Text style={styles.label}>Email</Text>
       <TextInput style={styles.input} value={dataWali?.email_wali || ''} editable={false} />
+
+      <Text style={styles.label}>Pekerjaan</Text>
+      <TextInput style={styles.input} value={pekerjaanWali || ''} editable={false} />
+
+      <Text style={styles.label}>Pendidikan</Text>
+      <TextInput style={styles.input} value={pendidikanWali || ''} editable={false} />
     </View>
   );
 };
@@ -212,8 +272,97 @@ const PemeriksaanLansiaSection = () => {
   );
 };
 
+const DataLansiaSection = ({ dataList}) => {
+  const [dataLansia, setDataLansia] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchDataLansia = async () => {
+    const token = await AsyncStorage.getItem('token');
+    try {
+      const response = await axios.get(`${Config.API_URL}/lansia`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      // Filter Lansia berdasarkan orangtuaId
+      const filteredLansia = response.data.filter((lansia) => lansia.orangtua === dataList.id);
+      setDataLansia(filteredLansia);
+    } catch (error) {
+      console.error('Error fetching data lansia:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDataLansia();
+  }, [dataList]);
+
+  if (isLoading) {
+    return <Text>Loading...</Text>;
+  }
+
+  if (dataLansia.length === 0) {
+    return <Text>No data available</Text>;
+  }
+
+  return (
+    <ScrollView style={styles.dataSection}>
+      {dataLansia.map((item) => (
+        <RenderLansiaItem key={item.id} item={item} />
+      ))}
+    </ScrollView>
+  );
+};
+
+const RenderLansiaItem = ({ item }) => {
+  const navigation = useNavigation();
+
+  const handlePress = () => {
+    navigation.navigate('DetailLansia', { id: item.id });
+  };
+
+  const calculateAge = (birthDate) => {
+    if (!birthDate) return '';
+
+    const now = moment();
+    const birthMoment = moment(birthDate);
+    const years = now.diff(birthMoment, 'years');
+    const months = now.diff(birthMoment, 'months') % 12;
+
+    return `${years} tahun, ${months} bulan`;
+  };
+
+  return (
+    <View style={styles.verificationCard}>
+      <View style={styles.verificationCardContent}>
+        <View style={{ flexDirection: 'column', width: '70%' }}>
+          <Text style={styles.verificationTextTitle}>{item.nama_lansia}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Icon name="id-card" size={20} color="#424F5E" />
+            <Text style={styles.verificationText3}>{item.nik_lansia}</Text>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 5 }}>
+            <Icon name="transgender" size={20} color="#424F5E" />
+            <Text style={styles.verificationText3}>{item.jenis_kelamin_lansia === 'l' ? 'Laki-Laki' : 'Perempuan'}</Text>
+          </View>
+
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={styles.verificationText}>{calculateAge(item.tanggal_lahir_lansia)}</Text>
+          </View>
+        </View>
+        <View style={{ flexDirection: 'column', justifyContent: 'center' }}>
+          <TouchableOpacity style={styles.statusButton} onPress={handlePress}>
+            <Icon name="eye" size={20} color="#16DBCC" />
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
+};
+
+
 // Main Component
-export { BiodataLansiaSection, BiodataWaliSection, PemeriksaanLansiaSection };
+export { BiodataLansiaSection, BiodataWaliSection, PemeriksaanLansiaSection, DataLansiaSection };
 // Styles
 const styles = StyleSheet.create({
   dataSection: {
@@ -269,18 +418,28 @@ const styles = StyleSheet.create({
     fontSize: 12,
     flexWrap: 'wrap',
     width: 150,
+    marginLeft: 5
   },
   statusButton: {
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 5,
     alignItems: 'center',
+    backgroundColor: '#DCFAF8',
   },
   normal: {
     backgroundColor: '#16DBCC',
   },
   abnormal: {
     backgroundColor: '#FF4C4C',
+  },
+  verificationText: {
+    color: 'black',
+    fontFamily: 'Urbanist-Bold',
+    marginBottom: 5,
+    fontSize: 12,
+    flexWrap: 'wrap',
+    width: 150,
   },
   statusText: {
     color: '#FFFFFF',

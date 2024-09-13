@@ -12,8 +12,10 @@ import ErrorModal from '../../../../components/modals/ErrorModal';
 import ConfirmationModal from '../../../../components/modals/ConfirmationModal';
 import DatePicker from 'react-native-date-picker';
 import Config from 'react-native-config';
-
+import { useFocusEffect } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 const DataWali = () => {
+  const navigation = useNavigation();
   const [searchQuery, setSearchQuery] = useState('');
   const [dataWali, setDataWali] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
@@ -27,6 +29,7 @@ const DataWali = () => {
   const [openPendidikanWali, setOpenPendidikanWali] = useState(false);
   const [openJenisKelaminWali, setOpenJenisKelaminWali] = useState(false);
   const [errorVisible, setErrorVisible] = useState(false);
+  
   const [errorMessage, setErrorMessage] = useState('');
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [selectedId, setSelectedId] = useState(null);

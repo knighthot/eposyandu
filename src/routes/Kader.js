@@ -24,6 +24,7 @@ import DataImunisasiAnak from '../screens/Kader/balita/dataImunisasi/DataImunisa
 import EditIbuForm from '../screens/Kader/balita/dataOrangTua/EditIbuForm';
 import EditAyahForm from '../screens/Kader/balita/dataOrangTua/EditAyahForm.js';
 import Login from '../screens/auth/login/Index'
+import DetailWali from '../screens/Kader/lansia/DataWali/DetailWali.js';
 import InfoAplikasi from '../screens/InfoAplikasi';
 import DataDokumentasi from '../screens/Kader/Dokumentasi/DataDokumentasi.js';
 import DataWali from '../screens/Kader/lansia/DataWali/DataWali.js';
@@ -264,6 +265,7 @@ const StackNavigator = () => {
       <Stack.Screen name="EditAyahForm" component={EditAyahForm} options={{headerShown: false}} />
       <Stack.Screen name="DataWali" component={DataWali} options={{headerShown: false}} />
         <Stack.Screen name="DetailLansia" component={DetailLansia} options={{headerShown: false}} />
+        <Stack.Screen name="DetailWali" component={DetailWali} options={{headerShown: false}} />
     </Stack.Navigator>
   );
 };

@@ -1,11 +1,15 @@
 import { View, Text, StyleSheet, Image, TouchableOpacity, TextInput, Modal, ActivityIndicator, ScrollView } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import Header from '../../../Kader/componentKader/Header';
-import {  BiodataLansiaSection, BiodataWaliSection, PemeriksaanLansiaSection  } from '../../componentKader/DataLansia';
+import { BiodataLansiaSection, BiodataWaliSection, PemeriksaanLansiaSection } from '../../componentKader/DataLansia';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import DropDownPicker from 'react-native-dropdown-picker';
 import DatePicker from 'react-native-date-picker';
 import moment from 'moment';
+import LoadingModal from '../../../../components/modals/LoadingModal';
+import SuccessModal from '../../../../components/modals/SuccessModal ';
+import ErrorModal from '../../../../components/modals/ErrorModal';
+import ConfirmationModal from '../../../../components/modals/ConfirmationModal';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
@@ -19,6 +23,9 @@ const DetailLansia = ({ route }) => {
   const [activeTab, setActiveTab] = useState('Biodata');
   const [modalVisible, setIsModalVisible] = useState(0);
   const [openLansia, setOpenLansia] = useState(false);
+  const [confirmVisible, setConfirmVisible] = useState(false);
+  const [successVisible, setSuccessVisible] = useState(false);
+  const [loadingVisible, setLoadingVisible] = useState(false);
   const [isDatePickerOpen, setDatePickerOpen] = useState(false);
   const [dataWali, setDataWali] = useState(null);  // For wali data
   const [dataLansia, setDataLansia] = useState(null);  // For lansia data
@@ -30,18 +37,32 @@ const DetailLansia = ({ route }) => {
   const [pendidikanOptions, setPendidikanOptions] = useState([]);
   const [openStatusPernikahan, setOpenStatusPernikahan] = useState('');
   const [openWaliDropdown, setOpenWaliDropdown] = useState(false);
+  const [errorVisible, setErrorVisible] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [walis, setWaliOptions] = useState([]);  // Options for wali dropdown
   const [formData, setFormData] = useState({
-    wali: '',  // Wali field
-    nama: '',
-    nikLansia: '',
-    jenisKelamin: '',
-    tempatLahir: '',
-    tanggalLahir: '',
-    beratBadanAwal: '',
-    tinggiBadanAwal: '',
-    riwayatPenyakit: '',
-    keterangan: ''
+    no_kk_lansia: '',
+    wali: '',
+    nik_lansia: '',
+    nama_lansia: '',
+    tempat_lahir_lansia: '',
+    tanggal_lahir_lansia: '',
+    jenis_kelamin_lansia: '',
+    alamat_ktp_lansia: '',
+    kelurahan_ktp_lansia: '',
+    kecamatan_ktp_lansia: '',
+    kota_ktp_lansia: '',
+    provinsi_ktp_lansia: '',
+    alamat_domisili_lansia: '',
+    kelurahan_domisili_lansia: '',
+    kecamatan_domisili_lansia: '',
+    kota_domisili_lansia: '',
+    provinsi_domisili_lansia: '',
+    no_hp_lansia: '',
+    email_lansia: '',
+    pekerjaan_lansia: '',
+    pendidikan_lansia: '',
+    status_pernikahan_lansia: '',
   });
 
   const [items, setItems] = useState([
@@ -56,10 +77,51 @@ const DetailLansia = ({ route }) => {
         return <BiodataLansiaSection dataLansia={dataLansia} />;
       case 'Pemeriksaan':
         return <PemeriksaanLansiaSection />;
-        default:
-          return null;
+      default:
+        return null;
     }
   }
+
+
+  // Mengambil data lansia dan wali
+  const fetchData = async () => {
+    const token = await AsyncStorage.getItem('token');
+    try {
+      const [waliResponse, pekerjaanResponse, pendidikanResponse] = await Promise.all([
+        axios.get(`${Config.API_URL}/wali`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        axios.get(`${Config.API_URL}/pekerjaan`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        axios.get(`${Config.API_URL}/pendidikan`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
+
+      // Map data for the dropdowns
+      const waliData = waliResponse.data.map(wali => ({ label: wali.nama_wali, value: wali.id, key: wali.id }));
+      const pekerjaanData = pekerjaanResponse.data.map(pekerjaan => ({ label: pekerjaan.nama, value: pekerjaan.id, key: pekerjaan.id }));
+      const pendidikanData = pendidikanResponse.data.map(pendidikan => ({ label: pendidikan.nama, value: pendidikan.id, key: pendidikan.id }));
+
+      setWaliOptions(waliData);
+      setPekerjaanOptions(pekerjaanData);
+      setPendidikanOptions(pendidikanData);
+
+      // Fetch lansia data
+      const response = await axios.get(`${Config.API_URL}/lansia/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setDataLansia(response.data);
+      if (response.data.wali) {
+        fetchWali(response.data.wali);  // Fetch wali if data exists
+      }
+      setIsLoading(false);
+    } catch (error) {
+      console.error('Error fetching dropdown data:', error);
+      setIsLoading(false);
+    }
+  };
 
   const renderProfileImage = () => {
     switch (dataLansia?.jenis_kelamin_lansia) {
@@ -83,58 +145,104 @@ const DetailLansia = ({ route }) => {
     }
   };
 
-  const fetchWaliDropdown = async () => {
-    const token = await AsyncStorage.getItem('token');
-    try {
-      const response = await axios.get(`${Config.API_URL}/wali`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      const data = response.data.map((wali) => ({
-        label: wali.nama_wali,
-        value: wali.id,
-        key: wali.id
-      }));
-      setWaliOptions(data);
-    } catch (error) {
-      console.error('Error fetching wali:', error);
+  const validateForm = () => {
+    let errors = [];
+  
+    if (!formData.no_kk_lansia) {
+      errors.push('- Nomor KK tidak boleh kosong');
     }
+  
+    if (!formData.nama_lansia) {
+      errors.push('- Nama Lansia tidak boleh kosong');
+    }
+  
+    if (!formData.nik_lansia) {
+      errors.push('- NIK Lansia tidak boleh kosong');
+    } else if (!/^\d{16}$/.test(formData.nik_lansia)) {
+      errors.push('- NIK Lansia harus 16 angka');
+    }
+  
+    if (!formData.tempat_lahir_lansia) {
+      errors.push('- Tempat Lahir Lansia tidak boleh kosong');
+    }
+  
+    if (!formData.tanggal_lahir_lansia) {
+      errors.push('- Tanggal Lahir Lansia tidak boleh kosong');
+    }
+  
+    if (!formData.pekerjaan_lansia) {
+      errors.push('- Pekerjaan Lansia tidak boleh kosong');
+    }
+  
+    if (!formData.pendidikan_lansia) {
+      errors.push('- Pendidikan Lansia tidak boleh kosong');
+    }
+  
+    if (!formData.alamat_ktp_lansia) {
+      errors.push('- Alamat KTP Lansia tidak boleh kosong');
+    }
+  
+    if (!formData.kelurahan_ktp_lansia) {
+      errors.push('- Kelurahan KTP Lansia tidak boleh kosong');
+    }
+  
+    if (!formData.kecamatan_ktp_lansia) {
+      errors.push('- Kecamatan KTP Lansia tidak boleh kosong');
+    }
+  
+    if (!formData.kota_ktp_lansia) {
+      errors.push('- Kota KTP Lansia tidak boleh kosong');
+    }
+  
+    if (!formData.provinsi_ktp_lansia) {
+      errors.push('- Provinsi KTP Lansia tidak boleh kosong');
+    }
+  
+    if (!formData.alamat_domisili_lansia) {
+      errors.push('- Alamat Domisili Lansia tidak boleh kosong');
+    }
+  
+    if (!formData.kelurahan_domisili_lansia) {
+      errors.push('- Kelurahan Domisili Lansia tidak boleh kosong');
+    }
+  
+    if (!formData.kecamatan_domisili_lansia) {
+      errors.push('- Kecamatan Domisili Lansia tidak boleh kosong');
+    }
+  
+    if (!formData.kota_domisili_lansia) {
+      errors.push('- Kota Domisili Lansia tidak boleh kosong');
+    }
+  
+    if (!formData.provinsi_domisili_lansia) {
+      errors.push('- Provinsi Domisili Lansia tidak boleh kosong');
+    }
+  
+    if (!formData.no_hp_lansia) {
+      errors.push('- Nomor HP Lansia tidak boleh kosong');
+    } else if (!/^\d{10,12}$/.test(formData.no_hp_lansia)) {
+      errors.push('- Nomor HP Lansia harus antara 10 hingga 12 angka');
+    }
+  
+    if (!formData.email_lansia) {
+      errors.push('- Email Lansia tidak boleh kosong');
+    } else if (!/\S+@\S+\.\S+/.test(formData.email_lansia)) {
+      errors.push('- Email Lansia tidak valid');
+    }
+  
+    if (!formData.wali) {
+      errors.push('- Nama Wali tidak boleh kosong');
+    }
+  
+    if (!formData.status_pernikahan_lansia) {
+      errors.push('- Status pernikahan Lansia tidak boleh kosong');
+    }
+  
+    return errors;
   };
 
-  useFocusEffect(
-    React.useCallback(() => {
-      fetchWaliDropdown();
-      fetchWali();
-      return () => { };
-    }, [])
-  );
-
-  useEffect(() => {
-    const fetchData = async () => {
-      const token = await AsyncStorage.getItem('token');
-      try {
-        const response = await axios.get(`${Config.API_URL}/lansia/${id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        setDataLansia(response.data);
-        if (response.data.wali) {
-          fetchWali(response.data.wali);  // Fetch wali if data exists
-        }
-        setIsLoading(false);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        setIsLoading(false);
-      }
-    };
-    fetchData();
-  }, [id]);
-
-  // Fetch data wali based on id
+  // Fetch data wali berdasarkan ID wali
   const fetchWali = async (idWali) => {
-    console.log(`${Config.API_URL}/wali/${idWali}`)
     const token = await AsyncStorage.getItem('token');
     try {
       const response = await axios.get(`${Config.API_URL}/wali/${idWali}`, {
@@ -144,23 +252,42 @@ const DetailLansia = ({ route }) => {
       });
       setDataWali(response.data);  // Set data wali from API
     } catch (error) {
-    
+      console.error('Error fetching wali:', error);
     }
   };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchData();  // Memuat ulang data setiap kali layar difokuskan
+      return () => { };
+    }, [])
+  );
 
   useEffect(() => {
     if (dataLansia && dataLansia?.wali) {
       setFormData({
+        no_kk_lansia: dataLansia.no_kk_lansia || '',
         wali: dataLansia.wali || '',
-        nama: dataLansia.nama_lansia || '',
-        nikLansia: dataLansia.nik_lansia?.toString() || '',
-        jenisKelamin: dataLansia.jenis_kelamin_lansia || '',
-        tempatLahir: dataLansia.tempat_lahir_lansia || '',
-        tanggalLahir: dataLansia.tanggal_lahir_lansia ? new Date(dataLansia.tanggal_lahir_lansia) : '',
-        beratBadanAwal: dataLansia.berat_badan_awal?.toString() || '',
-        tinggiBadanAwal: dataLansia.tinggi_badan_awal?.toString() || '',
-        riwayatPenyakit: dataLansia.riwayat_penyakit || '',
-        keterangan: dataLansia.keterangan || '',
+        nik_lansia: dataLansia.nik_lansia?.toString() || '',
+        nama_lansia: dataLansia.nama_lansia || '',
+        tempat_lahir_lansia: dataLansia.tempat_lahir_lansia || '',
+        tanggal_lahir_lansia: dataLansia.tanggal_lahir_lansia ? new Date(dataLansia.tanggal_lahir_lansia) : '',
+        jenis_kelamin_lansia: dataLansia.jenis_kelamin_lansia || '',
+        alamat_ktp_lansia: dataLansia.alamat_ktp_lansia || '',
+        kelurahan_ktp_lansia: dataLansia.kelurahan_ktp_lansia || '',
+        kecamatan_ktp_lansia: dataLansia.kecamatan_ktp_lansia || '',
+        kota_ktp_lansia: dataLansia.kota_ktp_lansia || '',
+        provinsi_ktp_lansia: dataLansia.provinsi_ktp_lansia || '',
+        alamat_domisili_lansia: dataLansia.alamat_domisili_lansia || '',
+        kelurahan_domisili_lansia: dataLansia.kelurahan_domisili_lansia || '',
+        kecamatan_domisili_lansia: dataLansia.kecamatan_domisili_lansia || '',
+        kota_domisili_lansia: dataLansia.kota_domisili_lansia || '',
+        provinsi_domisili_lansia: dataLansia.provinsi_domisili_lansia || '',
+        no_hp_lansia: dataLansia.no_hp_lansia?.toString() || '',
+        email_lansia: dataLansia.email_lansia || '',
+        pekerjaan_lansia: dataLansia.pekerjaan_lansia || '',
+        pendidikan_lansia: dataLansia.pendidikan_lansia || '',
+        status_pernikahan_lansia: dataLansia.status_pernikahan_lansia || '',
       });
     }
   }, [dataLansia]);
@@ -171,28 +298,50 @@ const DetailLansia = ({ route }) => {
 
   const handleSave = async () => {
     const token = await AsyncStorage.getItem('token');
-    if (!formData.wali) {
-      console.error("Wali data is missing");
+    const errors = validateForm();
+  
+    if (errors.length > 0) {
+      setErrorMessage(errors.join('\n')); // Gabungkan semua error dalam satu pesan
+      setErrorVisible(true);  // Tampilkan modal error
       return;
     }
     try {
+      // Update data lansia
       await axios.put(`${Config.API_URL}/lansia/${id}`, {
-        nama_lansia: formData.nama,
+        no_kk_lansia: formData.no_kk_lansia,
         wali: formData.wali,
-        nik_lansia: formData.nikLansia,
-        jenis_kelamin_lansia: formData.jenisKelamin,
-        tempat_lahir_lansia: formData.tempatLahir,
-        tanggal_lahir_lansia: formData.tanggalLahir,
-        berat_badan_awal: formData.beratBadanAwal,
-        tinggi_badan_awal: formData.tinggiBadanAwal,
-        riwayat_penyakit: formData.riwayatPenyakit,
-        keterangan: formData.keterangan,
+        nik_lansia: formData.nik_lansia,
+        nama_lansia: formData.nama_lansia,
+        tempat_lahir_lansia: formData.tempat_lahir_lansia,
+        tanggal_lahir_lansia: formData.tanggal_lahir_lansia,
+        jenis_kelamin_lansia: formData.jenis_kelamin_lansia,
+        alamat_ktp_lansia: formData.alamat_ktp_lansia,
+        kelurahan_ktp_lansia: formData.kelurahan_ktp_lansia,
+        kecamatan_ktp_lansia: formData.kecamatan_ktp_lansia,
+        kota_ktp_lansia: formData.kota_ktp_lansia,
+        provinsi_ktp_lansia: formData.provinsi_ktp_lansia,
+        alamat_domisili_lansia: formData.alamat_domisili_lansia,
+        kelurahan_domisili_lansia: formData.kelurahan_domisili_lansia,
+        kecamatan_domisili_lansia: formData.kecamatan_domisili_lansia,
+        kota_domisili_lansia: formData.kota_domisili_lansia,
+        provinsi_domisili_lansia: formData.provinsi_domisili_lansia,
+        no_hp_lansia: formData.no_hp_lansia,
+        email_lansia: formData.email_lansia,
+        pekerjaan_lansia: formData.pekerjaan_lansia,
+        pendidikan_lansia: formData.pendidikan_lansia,
+        status_pernikahan_lansia: formData.status_pernikahan_lansia,
       }, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
+      
+      // Setelah update berhasil, panggil fetchData untuk memperbarui data
+      fetchData();  // Memuat ulang data setelah update berhasil
+      
+      // Tutup modal setelah update berhasil
       setIsModalVisible(false);
+      
     } catch (error) {
       console.error('Error updating data:', error);
     }
@@ -220,12 +369,12 @@ const DetailLansia = ({ route }) => {
                 <Text style={styles.value}>{dataLansia?.jenis_kelamin_lansia === 'l' ? 'Laki-Laki' : 'Perempuan'}</Text>
               </View>
               <View style={styles.rightSection}>
-              <View style={[styles.profileImageContainer, { backgroundColor: renderBackgroundColor(dataLansia?.jenis_kelamin_lansia) }]}>
+                <View style={[styles.profileImageContainer, { backgroundColor: renderBackgroundColor(dataLansia?.jenis_kelamin_lansia) }]}>
                   <Image
                     style={styles.profileImage}
                     source={renderProfileImage(dataLansia?.jenis_kelamin_lansia)}
                   />
-                  </View>
+                </View>
                 <TouchableOpacity style={styles.editButton} onPress={() => setIsModalVisible(1)}>
                   <Icon name="pencil" size={20} color="white" />
                 </TouchableOpacity>
@@ -243,7 +392,7 @@ const DetailLansia = ({ route }) => {
                 BIODATA
               </Text>
             </TouchableOpacity>
-          
+
             <TouchableOpacity
               style={[styles.tabButton, activeTab === 'Pemeriksaan' && styles.activeTabButton]}
               onPress={() => setActiveTab('Pemeriksaan')}
@@ -262,274 +411,325 @@ const DetailLansia = ({ route }) => {
           </ScrollView>
         </>
       )}
-     <Modal
-  transparent={true}
-  visible={modalVisible === 1}
-  animationType="slide"
-  onRequestClose={() => setIsModalVisible(false)}
->
-  <View style={styles.modalOverlay}>
-    <View style={styles.modalContainer}>
-      <Text style={styles.modalTitle}>Edit Data Lansia (Bagian 1)</Text>
+      
+      {/* Modal Loading */}
+      <LoadingModal visible={loadingVisible} />
 
-      {/* No KK Lansia */}
-      <TextInput
-        style={styles.input}
-        placeholder="Nomor KK Lansia"
-        keyboardType="numeric"
-        maxLength={16}
-        value={formData.no_kk_lansia}
-        onChangeText={(value) => handleInputChange('no_kk_lansia', value)}
+      {/* Modal Sukses */}
+      <SuccessModal
+        visible={successVisible}
+        message="Data lansia berhasil ditambahkan."
+        onClose={() => setSuccessVisible(false)}
       />
 
-      {/* Jenis Kelamin */}
-      <DropDownPicker
-        open={openLansia}
-        value={formData.jenis_kelamin_lansia}
-        items={items}
-        setOpen={setOpenLansia}
-        onSelectItem={(item) => setFormData({ ...formData, jenis_kelamin_lansia: item.value })}
-        placeholder="Pilih Jenis Kelamin"
-        containerStyle={styles.dropdownContainer}
-        style={styles.dropdown}
+      {/* Modal Error */}
+      <ErrorModal
+        visible={errorVisible}
+        message={errorMessage}
+        onClose={() => setErrorVisible(false)}
       />
 
-      {/* Nama Lansia */}
-      <TextInput
-        style={styles.input}
-        placeholder="Nama Lansia"
-        value={formData.nama_lansia}
-        onChangeText={(value) => handleInputChange('nama_lansia', value)}
+      {/* Modal Konfirmasi Hapus */}
+      <ConfirmationModal
+        visible={confirmVisible}
+        message="Apakah Anda yakin ingin menghapus data lansia ini?"
+        onConfirm={() => handleDelete(selectedId)}
+        onCancel={() => setConfirmVisible(false)}
       />
-
-      {/* NIK Lansia */}
-      <TextInput
-        style={styles.input}
-        placeholder="NIK Lansia"
-        keyboardType="numeric"
-        maxLength={16}
-        value={formData.nik_lansia}
-        onChangeText={(value) => handleInputChange('nik_lansia', value)}
-      />
-
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-        {/* Tempat Lahir */}
-        <TextInput
-          style={styles.input1}
-          placeholder="Tempat Lahir"
-          value={formData.tempat_lahir_lansia}
-          onChangeText={(value) => handleInputChange('tempat_lahir_lansia', value)}
-        />
-
-        {/* Tanggal Lahir */}
-        <TouchableOpacity
-          style={styles.datePickerButton}
-          onPress={() => setDatePickerOpen(true)}
-        >
-          <Text style={styles.datePickerButtonText}>
-            {formData.tanggal_lahir_lansia
-              ? moment(formData.tanggal_lahir_lansia).format('DD/MM/YYYY')
-              : 'Tanggal Lahir'}
-          </Text>
-        </TouchableOpacity>
-
-        <DatePicker
-          modal
-          open={isDatePickerOpen}
-          date={formData.tanggal_lahir_lansia || new Date()}
-          mode="date"
-          onConfirm={(date) => {
-            setDatePickerOpen(false);
-            handleInputChange('tanggal_lahir_lansia', date);
-          }}
-          onCancel={() => setDatePickerOpen(false)}
-        />
-      </View>
-
-      {/* Alamat KTP */}
-      <TextInput
-        style={styles.input}
-        placeholder="Alamat KTP"
-        value={formData.alamat_ktp_lansia}
-        onChangeText={(value) => handleInputChange('alamat_ktp_lansia', value)}
-      />
-
-      {/* Kelurahan KTP */}
-      <TextInput
-        style={styles.input}
-        placeholder="Kelurahan KTP"
-        value={formData.kelurahan_ktp_lansia}
-        onChangeText={(value) => handleInputChange('kelurahan_ktp_lansia', value)}
-      />
-
-      {/* Kecamatan KTP */}
-      <TextInput
-        style={styles.input}
-        placeholder="Kecamatan KTP"
-        value={formData.kecamatan_ktp_lansia}
-        onChangeText={(value) => handleInputChange('kecamatan_ktp_lansia', value)}
-      />
-
-      {/* Kota KTP */}
-      <TextInput
-        style={styles.input}
-        placeholder="Kota KTP"
-        value={formData.kota_ktp_lansia}
-        onChangeText={(value) => handleInputChange('kota_ktp_lansia', value)}
-      />
-
-      {/* Provinsi KTP */}
-      <TextInput
-        style={styles.input}
-        placeholder="Provinsi KTP"
-        value={formData.provinsi_ktp_lansia}
-        onChangeText={(value) => handleInputChange('provinsi_ktp_lansia', value)}
-      />
-
-      {/* Tombol Lanjut ke Bagian 2 */}
-      <TouchableOpacity
-        style={styles.saveButton}
-        onPress={() => setIsModalVisible(2)}
+    
+      <Modal
+        transparent={true}
+        visible={modalVisible === 1}
+        animationType="slide"
+        onRequestClose={() => setIsModalVisible(false)}
       >
-        <Text style={styles.saveButtonText}>Lanjut</Text>
-      </TouchableOpacity>
-    </View>
-  </View>
-</Modal>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Edit Data Lansia (Bagian 1)</Text>
 
-{/* Edit Lansia Modal - Part 2 */}
-<Modal
-  transparent={true}
-  visible={modalVisible === 2}
-  animationType="slide"
-  onRequestClose={() => setIsModalVisible(false)}
->
-  <View style={styles.modalOverlay}>
-    <View style={styles.modalContainer}>
-      <Text style={styles.modalTitle}>Edit Data Lansia (Bagian 2)</Text>
+            {/* No KK Lansia */}
+            <TextInput
+              style={styles.input}
+              placeholder="Nomor KK Lansia"
+              keyboardType="numeric"
+              placeholderTextColor={'gray'}
+              maxLength={16}
+              value={formData.no_kk_lansia}
+              onChangeText={(value) => handleInputChange('no_kk_lansia', value)}
+            />
 
-      {/* Alamat Domisili */}
-      <TextInput
-        style={styles.input}
-        placeholder="Alamat Domisili"
-        value={formData.alamat_domisili_lansia}
-        onChangeText={(value) => handleInputChange('alamat_domisili_lansia', value)}
-      />
+            {/* Jenis Kelamin */}
+            <DropDownPicker
+              open={openLansia}
+              value={formData.jenis_kelamin_lansia}
+              items={items}
+              placeholderTextColor={'gray'}
+              setOpen={setOpenLansia}
+              onSelectItem={(item) => setFormData({ ...formData, jenis_kelamin_lansia: item.value })}
+              placeholder="Pilih Jenis Kelamin"
+              containerStyle={styles.dropdownContainer}
+              style={styles.dropdown}
+            />
 
-      {/* Kelurahan Domisili */}
-      <TextInput
-        style={styles.input}
-        placeholder="Kelurahan Domisili"
-        value={formData.kelurahan_domisili_lansia}
-        onChangeText={(value) => handleInputChange('kelurahan_domisili_lansia', value)}
-      />
+            {/* Nama Lansia */}
+            <TextInput
+              style={styles.input}
+              placeholder="Nama Lansia"
+              placeholderTextColor={'gray'}
+              value={formData.nama_lansia}
+              onChangeText={(value) => handleInputChange('nama_lansia', value)}
+            />
 
-      {/* Kecamatan Domisili */}
-      <TextInput
-        style={styles.input}
-        placeholder="Kecamatan Domisili"
-        value={formData.kecamatan_domisili_lansia}
-        onChangeText={(value) => handleInputChange('kecamatan_domisili_lansia', value)}
-      />
+            {/* NIK Lansia */}
+            <TextInput
+              style={styles.input}
+              placeholder="NIK Lansia"
+              keyboardType="numeric"
+              placeholderTextColor={'gray'}
+              maxLength={16}
+              value={formData.nik_lansia}
+              onChangeText={(value) => handleInputChange('nik_lansia', value)}
+            />
 
-      {/* Kota Domisili */}
-      <TextInput
-        style={styles.input}
-        placeholder="Kota Domisili"
-        value={formData.kota_domisili_lansia}
-        onChangeText={(value) => handleInputChange('kota_domisili_lansia', value)}
-      />
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              {/* Tempat Lahir */}
+              <TextInput
+                style={styles.input1}
+                placeholderTextColor={'gray'}
+                placeholder="Tempat Lahir"
+                value={formData.tempat_lahir_lansia}
+                onChangeText={(value) => handleInputChange('tempat_lahir_lansia', value)}
+              />
 
-      {/* Provinsi Domisili */}
-      <TextInput
-        style={styles.input}
-        placeholder="Provinsi Domisili"
-        value={formData.provinsi_domisili_lansia}
-        onChangeText={(value) => handleInputChange('provinsi_domisili_lansia', value)}
-      />
+              {/* Tanggal Lahir */}
+              <TouchableOpacity
+                style={styles.datePickerButton}
+                onPress={() => setDatePickerOpen(true)}
+              >
+                <Text style={styles.datePickerButtonText}>
+                  {formData.tanggal_lahir_lansia
+                    ? moment(formData.tanggal_lahir_lansia).format('DD/MM/YYYY')
+                    : 'Tanggal Lahir'}
+                </Text>
+              </TouchableOpacity>
 
-      {/* Pekerjaan */}
-      <DropDownPicker
-        open={openPekerjaanLansia}
-        value={formData.pekerjaan_lansia}
-        items={pekerjaanOptions.map(pekerjaan => ({ label: pekerjaan.nama, value: pekerjaan.id }))}
-        setOpen={setOpenPekerjaanLansia}
-        onSelectItem={(item) => handleInputChange('pekerjaan_lansia', item.value)}
-        placeholder="Pilih Pekerjaan"
-      />
+              <DatePicker
+                modal
+                open={isDatePickerOpen}
+                date={formData.tanggal_lahir_lansia || new Date()}
+                mode="date"
+                onConfirm={(date) => {
+                  setDatePickerOpen(false);
+                  handleInputChange('tanggal_lahir_lansia', date);
+                }}
+                onCancel={() => setDatePickerOpen(false)}
+              />
+            </View>
 
-      {/* Pendidikan */}
-      <DropDownPicker
-        open={openPendidikanLansia}
-        value={formData.pendidikan_lansia}
-        items={pendidikanOptions.map(pendidikan => ({ label: pendidikan.nama, value: pendidikan.id }))}
-        setOpen={setOpenPendidikanLansia}
-        onSelectItem={(item) => handleInputChange('pendidikan_lansia', item.value)}
-        placeholder="Pilih Pendidikan"
-      />
+            {/* Alamat KTP */}
+            <TextInput
+              style={styles.input}
+              placeholder="Alamat KTP"
+              placeholderTextColor={'gray'}
+              value={formData.alamat_ktp_lansia}
+              onChangeText={(value) => handleInputChange('alamat_ktp_lansia', value)}
+            />
 
-      {/* Status Pernikahan */}
-      <DropDownPicker
-        open={openStatusPernikahan}
-        value={formData.status_pernikahan_lansia}
-        items={[
-          { label: 'Tidak Menikah', value: 'Tidak Menikah' },
-          { label: 'Menikah', value: 'Menikah' },
-          { label: 'Duda', value: 'Duda' },
-          { label: 'Janda', value: 'Janda' }
-        ]}
-        setOpen={setOpenStatusPernikahan}
-        onSelectItem={(item) => handleInputChange('status_pernikahan_lansia', item.value)}
-        placeholder="Pilih Status Pernikahan"
-      />
+            {/* Kelurahan KTP */}
+            <TextInput
+              style={styles.input}
+              placeholder="Kelurahan KTP"
+              placeholderTextColor={'gray'}
+              value={formData.kelurahan_ktp_lansia}
+              onChangeText={(value) => handleInputChange('kelurahan_ktp_lansia', value)}
+            />
 
-      {/* Wali */}
-      <DropDownPicker
-        open={openWaliDropdown}
-        value={formData.wali}
-        items={walis.map(wali => ({ label: wali.nama_wali, value: wali.id }))}
-        setOpen={setOpenWaliDropdown}
-        onSelectItem={(item) => handleInputChange('wali', item.value)}
-        placeholder="Pilih Wali"
-      />
+            {/* Kecamatan KTP */}
+            <TextInput
+              style={styles.input}
+              placeholder="Kecamatan KTP"
+              placeholderTextColor={'gray'}
+              value={formData.kecamatan_ktp_lansia}
+              onChangeText={(value) => handleInputChange('kecamatan_ktp_lansia', value)}
+            />
 
-      {/* No HP */}
-      <TextInput
-        style={styles.input}
-        placeholder="No HP Lansia"
-        keyboardType="numeric"
-        value={formData.no_hp_lansia}
-        onChangeText={(value) => handleInputChange('no_hp_lansia', value)}
-      />
+            {/* Kota KTP */}
+            <TextInput
+              style={styles.input}
+              placeholder="Kota KTP"
+              placeholderTextColor={'gray'}
+              value={formData.kota_ktp_lansia}
+              onChangeText={(value) => handleInputChange('kota_ktp_lansia', value)}
+            />
 
-      {/* Email */}
-      <TextInput
-        style={styles.input}
-        placeholder="Email Lansia"
-        keyboardType="email-address"
-        value={formData.email_lansia}
-        onChangeText={(value) => handleInputChange('email_lansia', value)}
-      />
+            {/* Provinsi KTP */}
+            <TextInput
+              style={styles.input}
+              placeholder="Provinsi KTP"
+              placeholderTextColor={'gray'}
+              value={formData.provinsi_ktp_lansia}
+              onChangeText={(value) => handleInputChange('provinsi_ktp_lansia', value)}
+            />
 
-      {/* Tombol Simpan dan Kembali */}
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-        <TouchableOpacity
-          style={styles.saveButton}
-          onPress={() => setIsModalVisible(1)}
-        >
-          <Text style={styles.saveButtonText}>Kembali</Text>
-        </TouchableOpacity>
+            
+            {/* Alamat Domisili */}
+            <TextInput
+              style={styles.input}
+              placeholder="Alamat Domisili"
+              placeholderTextColor={'gray'}
+              value={formData.alamat_domisili_lansia}
+              onChangeText={(value) => handleInputChange('alamat_domisili_lansia', value)}
+            />
 
-        <TouchableOpacity
-          style={styles.saveButton}
-          onPress={handleSave}  // Save the updated data
-        >
-          <Text style={styles.saveButtonText}>Simpan</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  </View>
-</Modal>
+            {/* Tombol Lanjut ke Bagian 2 */}
+            <TouchableOpacity
+              style={styles.saveButton}
+              onPress={() => setIsModalVisible(2)}
+            >
+              <Text style={styles.saveButtonText}>Lanjut</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Edit Lansia Modal - Part 2 */}
+      <Modal
+        transparent={true}
+        visible={modalVisible === 2}
+        animationType="slide"
+        onRequestClose={() => setIsModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Edit Data Lansia (Bagian 2)</Text>
+
+
+            {/* Kelurahan Domisili */}
+            <TextInput
+              style={styles.input}
+              placeholder="Kelurahan Domisili"
+              value={formData.kelurahan_domisili_lansia}
+              onChangeText={(value) => handleInputChange('kelurahan_domisili_lansia', value)}
+            />
+
+            {/* Kecamatan Domisili */}
+            <TextInput
+              style={styles.input}
+              placeholder="Kecamatan Domisili"
+              value={formData.kecamatan_domisili_lansia}
+              onChangeText={(value) => handleInputChange('kecamatan_domisili_lansia', value)}
+            />
+
+            {/* Kota Domisili */}
+            <TextInput
+              style={styles.input}
+              placeholder="Kota Domisili"
+              value={formData.kota_domisili_lansia}
+              onChangeText={(value) => handleInputChange('kota_domisili_lansia', value)}
+            />
+
+            {/* Provinsi Domisili */}
+            <TextInput
+              style={styles.input}
+              placeholder="Provinsi Domisili"
+              value={formData.provinsi_domisili_lansia}
+              onChangeText={(value) => handleInputChange('provinsi_domisili_lansia', value)}
+            />
+
+            {/* Pekerjaan */}
+            <DropDownPicker
+              open={openPekerjaanLansia}
+              value={formData.pekerjaan_lansia}
+              items={pekerjaanOptions}
+              setOpen={setOpenPekerjaanLansia}
+              onSelectItem={(item) => handleInputChange('pekerjaan_lansia', item.value)}
+              placeholder="Pilih Pekerjaan"
+              containerStyle={{ zIndex: 1000 }}
+              style={styles.dropdown}
+              dropDownStyle={styles.dropdown}
+            />
+
+            {/* Pendidikan */}
+            <DropDownPicker
+            open={openPendidikanLansia}
+            value={formData.pendidikan_lansia}
+            items={pendidikanOptions}
+            setOpen={setOpenPendidikanLansia}
+            onSelectItem={(item) => handleInputChange('pendidikan_lansia', item.value)}
+            placeholder="Pilih Pendidikan"
+            containerStyle={{ zIndex: 999 }}
+            style={styles.dropdown}
+            dropDownStyle={styles.dropdown}
+          />
+            {/* Status Pernikahan */}
+            <DropDownPicker
+              open={openStatusPernikahan}
+              style={styles.dropdown}
+              containerStyle={{ zIndex: 998 }}
+              dropDownStyle={styles.dropdown}
+              value={formData.status_pernikahan_lansia}
+              items={[
+                { label: 'Tidak Menikah', value: 'Tidak Menikah' },
+                { label: 'Menikah', value: 'Menikah' },
+                { label: 'Duda', value: 'Duda' },
+                { label: 'Janda', value: 'Janda' }
+              ]}
+              setOpen={setOpenStatusPernikahan}
+              onSelectItem={(item) => handleInputChange('status_pernikahan_lansia', item.value)}
+              placeholder="Pilih Status Pernikahan"
+            />
+
+            <DropDownPicker
+              open={openWaliDropdown}
+              value={formData.wali}
+              style={styles.dropdown}
+              containerStyle={{ zIndex: 997 }}
+              dropDownStyle={styles.dropdown}
+              items={walis}
+              setOpen={setOpenWaliDropdown}
+              onSelectItem={(item) => handleInputChange('wali', item.value)}
+              placeholder="Pilih Wali"
+            />
+
+
+            {/* No HP */}
+            <TextInput
+              style={styles.input}
+              placeholder="No HP Lansia"
+              keyboardType="numeric"
+              value={formData.no_hp_lansia}
+              onChangeText={(value) => handleInputChange('no_hp_lansia', value)}
+            />
+
+            {/* Email */}
+            <TextInput
+              style={styles.input}
+              placeholder="Email Lansia"
+              keyboardType="email-address"
+              value={formData.email_lansia}
+              onChangeText={(value) => handleInputChange('email_lansia', value)}
+            />
+
+            {/* Tombol Simpan dan Kembali */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <TouchableOpacity
+                style={styles.saveButton}
+                onPress={() => setIsModalVisible(1)}
+              >
+                <Text style={styles.saveButtonText}>Kembali</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.saveButton}
+                onPress={handleSave}  // Save the updated data
+              >
+                <Text style={styles.saveButtonText}>Simpan</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
 
     </View>
   );

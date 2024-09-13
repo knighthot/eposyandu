@@ -8,7 +8,10 @@ import Header from '../../componentKader/Header';
 import React, { useState, useEffect } from 'react'
 import { PieChart } from "react-native-gifted-charts";
 import { useNavigation } from '@react-navigation/native';
-
+import Config from 'react-native-config';
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { jwtDecode } from 'jwt-decode';
 const dummyData = [
   {
     id: 1,
@@ -192,18 +195,18 @@ const DataPa = () => {
   const [openImunisasi, setOpenImunisasi] = useState(false);  // Dropdown for Imunisasi
   const [openVitamin, setOpenVitamin] = useState(false);  // Dropdown for Vitamin
   const [isDatePickerOpenBalita, setDatePickerOpenBalita] = useState(false);
-  const [selectedBalitaNik, setSelectedBalitaNik] = useState(null);  // Selected value
-  const [selectedDokter, setSelectedDokter] = useState(null);  // State for selected Dokter
   const [selectedImunisasi, setSelectedImunisasi] = useState(null);  // State for selected Imunisasi
   const [selectedVitamin, setSelectedVitamin] = useState(null);  // State for selected Vitamin
-  const [balitaItems, setBalitaItems] = useState([]);  // Data for the dropdown
-
+  const [dokterItems, setDokterItems] = useState([]);  // Data for Dokter dropdown
+  const [selectedBalita, setSelectedBalita] = useState(null);  // Selected Balita ID
+  const [selectedDokter, setSelectedDokter] = useState(null);  // Selected Dokter ID
+  const [openStatusGizi, setOpenStatusGizi] = useState(false);  // Dropdown for Status Gizi
+  const [balitaItems, setBalitaItems] = useState([]);
+  const [perkembangan_balita, setPerkembangan_balita] = useState([]);
   const navigation = useNavigation();
 
-  
-
   const [searchQuery, setSearchQuery] = useState('');  // State untuk menyimpan query pencarian
-  const [filteredData, setFilteredData] = useState(dummyData);  // Data yang akan ditampilkan setelah di-filter
+  const [filteredData, setFilteredData] = useState([]);  // Data yang akan ditampilkan setelah di-filter
 
   const [formData, setFormData] = useState({
     idBalita: '',
@@ -212,14 +215,14 @@ const DataPa = () => {
     beratbadangram: '',
     tinggibadan: '',
     keterangan: '',
-    tipeVitamine: '',
+    tipeVitamin: '',
     tipeImunisasi: '',
     lingkarKepala : '',
     idDokter: '',
   });
 
   useEffect(() => {
-    const dropdownData = dummyData.map((item) => ({
+    const dropdownData = balitaItems.map((item) => ({
       label: `${item.Nik_Balita} - ${item.nama_balita}`, // Label to display in the dropdown
       value: item.Nik_Balita, // Value to store (Nik_Balita)
     }));
@@ -230,7 +233,7 @@ const DataPa = () => {
   const handleSearch = (query) => {
     setSearchQuery(query);
     if (query === '') {
-      setFilteredData(dummyData);  // Jika query kosong, tampilkan semua data
+      setFilteredData(perkembangan_balita);  // Jika query kosong, tampilkan semua data
     } else {
       // Filter data sesuai dengan nama balita atau nama ibu
       const filtered = dummyData.filter((item) =>
@@ -241,41 +244,145 @@ const DataPa = () => {
     }
   };
 
+   // Fetch Balita and Dokter data
+   useEffect(() => {
+    fetchPerkembanganBalita();
+    fetchBalita();
+    fetchDokter();
+  }, []);
+
+  const fetchPerkembanganBalita = async () => {
+    const token = await AsyncStorage.getItem('token');
+    try {
+      const response = await axios.get(`${Config.API_URL}/perkembangan-balita`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setPerkembangan_balita(response.data);
+      console.log(response.data);
+    } catch (error) {
+    }
+  }
+
+  const fetchBalita = async () => {
+    const token = await AsyncStorage.getItem('token');
+    try {
+      const response = await axios.get(`${Config.API_URL}/balita`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const formattedBalita = response.data.map((balita) => ({
+        label: `${balita.nik_balita} - ${balita.nama_balita}`,
+        value: balita.id,
+      }));
+      setBalitaItems(formattedBalita);
+    } catch (error) {
+      console.error('Error fetching balita data:', error);
+    }
+  };
+
+  const fetchDokter = async () => {
+    const token = await AsyncStorage.getItem('token');
+    try {
+      const response = await axios.get(`${Config.API_URL}/dokter`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const formattedDokter = response.data.map((dokter) => ({
+        label: dokter.nama,
+        value: dokter.id,
+      }));
+      setDokterItems(formattedDokter);
+    } catch (error) {
+      console.error('Error fetching dokter data:', error);
+    }
+  };
+
+
+  const handleSave = async () => {
+    const token = await AsyncStorage.getItem('token');
+    const decodedToken = jwtDecode(token);
+    const id = decodedToken.id;
+    const newFormData = {
+      balita: selectedBalita,
+      tanggal_kunjungan: formData.TanggalKunjungan,
+      berat_badan: `${formData.beratbadankg}.${formData.beratbadangram}`,
+      tinggi_badan: formData.tinggibadan,
+      lingkar_kepala: formData.lingkarKepala,
+      status_gizi: "baik",
+      tipe_imunisasi: selectedImunisasi,
+      tipe_vitamin: selectedVitamin,
+      keterangan: formData.keterangan,
+      dokter: selectedDokter,
+      kader: id,  // Add kader id dynamically or from token
+    };
+
+    try {
+      console.log(newFormData);
+      console.log(`${Config.API_URL}/perkembangan-balita/`)
+      await axios.post(`${Config.API_URL}/perkembangan-balita/`, newFormData, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setModalVisible(false);
+      alert('Data berhasil disimpan');
+      // Optionally, refresh the list or perform other actions
+    } catch (error) {
+      // Tangkap semua informasi error
+      console.error('Error details:', error);
+    
+      // Cek apakah ada response dari server
+      if (error.response) {
+        console.error('Response Data:', error.response.data);
+        console.error('Response Status:', error.response.status);
+        console.error('Response Headers:', error.response.headers);
+      } else if (error.request) {
+        // Request dibuat tapi tidak ada respons dari server
+        console.error('Request Data:', error.request);
+      } else {
+        // Error lain, misalnya kesalahan konfigurasi dalam permintaan
+        console.error('Error Message:', error.message);
+      }
+    
+      // Cetak seluruh error object
+      console.error('Full Error:', error);
+    }
+  };
+
+
+
+  const tipeImunisasiItems = [
+    { label: 'Tidak ada', value: 'Tidak ada' },
+    { label: 'BCGE', value: 'BCGE' },
+    { label: 'Hepatitis B', value: 'Hepatitis B' },
+    { label: 'Polio', value: 'Polio' },
+    { label: 'DPT-HB-Hib', value: 'DPT-HB-Hib' },
+    { label: 'Campak', value: 'Campak' },
+    { label: 'MR', value: 'MR' }
+
+  ];
+
+  const tipeVitaminItems = [
+    { label: 'Tidak ada', value: 'Tidak ada' },
+    { label: 'Vitamin A', value: 'A' },
+    { label: 'Cacing', value: 'Cacing' }
+  ];
+
+
   const handleAddChildPress = () => {
     setModalVisible(true);
   };
 
   const handleInputChange = (name, value) => {
-    setFormData({ ...formData, [name]: value });
+    console.log(`Input ${name} changed to ${value}`);
+    setFormData((prevFormData) => ({
+      ...prevFormData,
+      [name]: value,
+    }));
   };
-
+  
 
   const handlePrintPress = () => {
     setPrintModalVisible(true);
   };
 
 
-  const idDokterItems = [
-    { label: 'Dokter 1', value: 'dokter1' },
-    { label: 'Dokter 2', value: 'dokter2' },
-    { label: 'Dokter 3', value: 'dokter3' }
-  ];
-  
-  const tipeImunisasiItems = [
-    { label: 'Tidak ada', value: 'Tidak ada' },
-    { label: 'BCG', value: 'BCG' },
-    { label: 'Hepatitis B', value: 'Hepatitis B' },
-    { label: 'Polio', value: 'Polio' },
-    { label: 'DPT-HB-Hib', value: 'DPT-HB-Hib' },
-    { label: 'Campak', value: 'Campak' },
-    { label: 'MR', value: 'MR' }
-  ];
-  
-  const tipeVitaminItems = [
-    { label: 'Tidak ada', value: 'Tidak ada' },
-    { label: 'Vitamin A', value: 'Vitamin A' },
-    { label: 'Cacing', value: 'Cacing' }
-  ];
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F5F7FA' }}>
@@ -404,10 +511,10 @@ const DataPa = () => {
             </View>
             <DropDownPicker
               open={openBalita}
-              value={selectedBalitaNik}
+              value={selectedBalita}
               items={balitaItems}
               setOpen={setOpenBalita}
-              setValue={setSelectedBalitaNik}
+              setValue={setSelectedBalita}
               setItems={setBalitaItems}
               placeholder="Pilih Balita"
               style={styles.dropdown}
@@ -439,24 +546,25 @@ const DataPa = () => {
             />
 
             <View style={{ flexDirection: 'row' }}>
-              <TextInput
-                style={styles.input1}
-                placeholder="Berat badan (Kg)"
-                keyboardType="numeric"
-                maxLength={16}
-                placeholderTextColor="gray"
-                value={formData.beratbadankg}
-                onChangeText={(value) => handleInputChange('beratBadankg', value)}
-              />
+            <TextInput
+  style={styles.input1}
+  placeholder="Berat badan (Kg)"
+  keyboardType="numeric"
+  maxLength={16}
+  placeholderTextColor="gray"
+  value={formData.beratbadankg}  // Mengikat nilai input ke state
+  onChangeText={(value) => handleInputChange('beratbadankg', value)}  // Meng-update state untuk kg
+/>
 
-              <TextInput
-                style={styles.input1}
-                placeholder="Berat Badan (Gram)"
-                value={formData.beratbadangram}
-                keyboardType="numeric"
-                placeholderTextColor="gray"
-                onChangeText={(value) => handleInputChange('beratBadangram', value)}
-              />
+<TextInput
+  style={styles.input1}
+  placeholder="Berat Badan (Gram)"
+  value={formData.beratbadangram}  // Mengikat nilai input ke state
+  keyboardType="numeric"
+  placeholderTextColor="gray"
+  onChangeText={(value) => handleInputChange('beratbadangram', value)}  // Meng-update state untuk gram
+/>
+
               
 
             </View>
@@ -468,14 +576,14 @@ const DataPa = () => {
                 placeholderTextColor="gray"
                 onChangeText={(value) => handleInputChange('lingkarKepala', value)}
               />
-            <TextInput
-              style={styles.input}
-              placeholder="Tinggi Badan (Cm)"
-              value={formData.tinggibadan}
-              keyboardType="numeric"
-              placeholderTextColor={'gray'}
-              onChangeText={(value) => handleInputChange('tinggiBadan', value)}
-            />
+           <TextInput
+  style={styles.input}
+  placeholder="Tinggi Badan (Cm)"
+  keyboardType="numeric"
+  placeholderTextColor="gray"
+  value={formData.tinggibadan}
+  onChangeText={(value) => handleInputChange('tinggibadan', value)} 
+/>
 
             <View style={{ marginBottom: 10 }}>
               <Text style={{ color: 'black', fontWeight: 'bold' }}>Imunisasi</Text>
@@ -514,16 +622,16 @@ const DataPa = () => {
             <DropDownPicker
               open={openDokter}
               value={selectedDokter}
-              items={idDokterItems}
+              items={dokterItems}
               setOpen={setOpenDokter}
               setValue={setSelectedDokter}
-              setItems={() => {}}
+              setItems={setDokterItems}
               placeholder="Pilih Dokter"
               style={styles.dropdown}
               dropDownContainerStyle={styles.dropdownContainer}
             />
-            <TouchableOpacity style={styles.saveButton} onPress={() => setModalVisible(false)}>
-              <Text style={styles.saveButtonText}>Tambah</Text>
+           <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+              <Text style={styles.saveButtonText}>Simpan</Text>
             </TouchableOpacity>
           </View>
         </View>

@@ -12,7 +12,7 @@ import ErrorModal from '../../../../components/modals/ErrorModal';
 import ConfirmationModal from '../../../../components/modals/ConfirmationModal';
 import DatePicker from 'react-native-date-picker';
 import Config from 'react-native-config';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation,useFocusEffect } from '@react-navigation/native';
 const DataLansia = () => {
   const navigation = useNavigation();
   const [searchQuery, setSearchQuery] = useState('');  // For search queries
