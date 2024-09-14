@@ -10,20 +10,14 @@ import SuccessModal from '../../../components/modals/SuccessModal ';
 import LoadingModal from '../../../components/modals/LoadingModal';
 import axios from 'axios';
 import {jwtDecode} from 'jwt-decode';
-// Function to validate email
-const validateEmail = (email) => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-};
 
-// Function to validate phone number
 const validatePhoneNumber = (phone) => {
   return phone.length >= 10 && !isNaN(phone);
 };
 
 const Index = () => {
   const navigation = useNavigation();
-  const [identifier, setIdentifier] = useState(''); // To hold either phone number or email
+  const [no_hp, setIdentifier] = useState(''); // To hold either phone number or email
   const [kataSandi, setKataSandi] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [loadingVisible, setLoadingVisible] = useState(false);
@@ -35,12 +29,9 @@ const Index = () => {
     setLoadingVisible(true);
     const currentErrors = [];
   
-    if (identifier.trim() === '') {
-      currentErrors.push('- Nomor telepon atau email diperlukan');
-    } else if (!validateEmail(identifier) && !validatePhoneNumber(identifier)) {
-      currentErrors.push('- Masukkan nomor telepon atau email yang valid.');
-    }
-  
+    if (no_hp.trim() === '') {
+      currentErrors.push('- Nomor telepon diperlukan');
+    } 
     if (kataSandi.trim() === '') {
       currentErrors.push('- Password diperlukan.');
     }
@@ -55,7 +46,7 @@ const Index = () => {
     try {
       // Send login request to the backend
       const response = await axios.post(`${Config.API_URL}/pengguna/login`, {
-        email: identifier,
+        no_hp: no_hp,
         kata_sandi: kataSandi,
       });
 
@@ -68,7 +59,7 @@ const Index = () => {
       await AsyncStorage.setItem('token', token);
       await AsyncStorage.setItem('userRole', response.data.role);
       await AsyncStorage.setItem('userName', response.data.userName);
-      await AsyncStorage.setItem('userEmail', response.data.userEmail);
+      await AsyncStorage.setItem('userNoHp', response.data.userNoHp.toString());
       await AsyncStorage.setItem('userId', id.toString());
     
       setLoadingVisible(false);
@@ -87,8 +78,9 @@ const Index = () => {
       setErrorMessage(error.response?.data?.error || 'Terjadi kesalahan. Silakan coba lagi.');
       setErrorVisible(true);
       setLoadingVisible(false);
+    
     }
-  };
+  }
 
 
   // const handleLogin = async () => {
@@ -182,8 +174,8 @@ const Index = () => {
           placeholder="No Handphone"
           placeholderTextColor={'#000000'}
           style={styles.input}
-          keyboardType='default'
-          value={identifier}
+          keyboardType='phone-pad'
+          value={no_hp}
           onChangeText={setIdentifier}
         />
         <View style={styles.passwordContainer}>

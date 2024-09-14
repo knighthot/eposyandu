@@ -2,6 +2,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList, Modal, 
 import moment from 'moment';
 import IconMaterial from 'react-native-vector-icons/MaterialCommunityIcons';
 import Icon from 'react-native-vector-icons/FontAwesome';
+import { antropometriBoys, antropometriGirl } from './DataAntropometri';
 import DropDownPicker from 'react-native-dropdown-picker';
 import DatePicker from 'react-native-date-picker';
 import Header from '../../componentKader/Header';
@@ -204,10 +205,12 @@ const DataPa = () => {
   const [balitaItems, setBalitaItems] = useState([]);
   const [perkembangan_balita, setPerkembangan_balita] = useState([]);
   const navigation = useNavigation();
-
+  const [BalitaData, setBalitaData] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');  // State untuk menyimpan query pencarian
   const [filteredData, setFilteredData] = useState([]);  // Data yang akan ditampilkan setelah di-filter
-
+  const [selectedAntropometri , setSelectedAntropometri] = useState(null);
+  const [zScore, setZScore] = useState(null); // State untuk menyimpan hasil Z-Score
+  const [statusGizi, setStatusGizi] = useState(null); // State untuk status gizi
   const [formData, setFormData] = useState({
     idBalita: '',
     TanggalKunjungan: null,
@@ -219,6 +222,7 @@ const DataPa = () => {
     tipeImunisasi: '',
     lingkarKepala : '',
     idDokter: '',
+    keterangan : '' ,
   });
 
   useEffect(() => {
@@ -275,10 +279,106 @@ const DataPa = () => {
       }));
       setBalitaItems(formattedBalita);
     } catch (error) {
-      console.error('Error fetching balita data:', error);
+      console.error('Error details:', error);
+    
+      // Cek apakah ada response dari server
+      if (error.response) {
+        console.error('Response Data:', error.response.data);
+        console.error('Response Status:', error.response.status);
+        console.error('Response Headers:', error.response.headers);
+      } else if (error.request) {
+        // Request dibuat tapi tidak ada respons dari server
+        console.error('Request Data:', error.request);
+      } else {
+        // Error lain, misalnya kesalahan konfigurasi dalam permintaan
+        console.error('Error Message:', error.message);
+      }
+    
+      // Cetak seluruh error object
+      console.error('Full Error:', error);
     }
   };
 
+  const handleBalitaSelect = async (value) => {
+    console.log(value, 'value');
+    setSelectedBalita(value); // Set selected balita
+    const token = await AsyncStorage.getItem('token');
+    try {
+      const response = await axios.get(`${Config.API_URL}/balita/${value}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const balitaData = response.data;
+
+      // Ambil tanggal lahir dan jenis kelamin
+      const { tanggal_lahir_balita, jenis_kelamin_balita } = balitaData;
+
+      // Hitung umur dalam bulan
+      const umurDalamBulan = moment().diff(moment(tanggal_lahir_balita), 'months');
+      setBalitaData({
+        ...balitaData,
+        umurDalamBulan,
+      });
+
+      console.log(umurDalamBulan, 'umurDalamBulan');
+
+      // Pilih data antropometri berdasarkan jenis kelamin
+      let selectedAntropometri;
+      if (jenis_kelamin_balita === 'l') {
+        selectedAntropometri = antropometriBoys.find((item) => item.umur === umurDalamBulan);
+      } else {
+        selectedAntropometri = antropometriGirl.find((item) => item.umur === umurDalamBulan);
+      }
+      setSelectedAntropometri(selectedAntropometri);
+    } catch (error) { 
+      console.error('Error details:', error);
+    
+      // Cek apakah ada response dari server
+      if (error.response) {
+        console.error('Response Data:', error.response.data);
+        console.error('Response Status:', error.response.status);
+        console.error('Response Headers:', error.response.headers);
+      } else if (error.request) {
+        // Request dibuat tapi tidak ada respons dari server
+        console.error('Request Data:', error.request);
+      } else {
+        // Error lain, misalnya kesalahan konfigurasi dalam permintaan
+        console.error('Error Message:', error.message);
+      }
+    
+      // Cetak seluruh error object
+      console.error('Full Error:', error);
+    }
+  };
+
+  // Perhitungan Z-Score secara dinamis saat berat badan (kg/gram) berubah
+  useEffect(() => {
+    if (formData.beratbadankg !== '' && selectedAntropometri) {
+      const beratBadanTotal = parseFloat(formData.beratbadankg) + (parseFloat(formData.beratbadangram) / 1000);
+      const medianBB = selectedAntropometri.median;
+      const sd = (selectedAntropometri["+1SD"] - selectedAntropometri["median"]) / 1; // Hitung SD sebagai jarak antara +1SD dan median
+      const zScore = (beratBadanTotal - medianBB) / sd;
+
+      setZScore(zScore);
+
+      // Tentukan status gizi berdasarkan Z-Score
+      let statusGizi;
+      if (zScore < -3) {
+        statusGizi = "buruk";
+      } else if (zScore >= -3 && zScore < -2) {
+        statusGizi = "kurang";
+      } else if (zScore >= -2 && zScore <= 1) {
+        statusGizi = "baik";
+      } else if (zScore > 1 && zScore <= 2) {
+        statusGizi = "lebih";
+      } else if (zScore > 2) {
+        statusGizi = "obesitas";
+      }
+
+      setStatusGizi(statusGizi);
+    }
+  }, [formData.beratbadankg, formData.beratbadangram, selectedAntropometri]);
+  
+  
   const fetchDokter = async () => {
     const token = await AsyncStorage.getItem('token');
     try {
@@ -306,7 +406,7 @@ const DataPa = () => {
       berat_badan: `${formData.beratbadankg}.${formData.beratbadangram}`,
       tinggi_badan: formData.tinggibadan,
       lingkar_kepala: formData.lingkarKepala,
-      status_gizi: "baik",
+      status_gizi: statusGizi,
       tipe_imunisasi: selectedImunisasi,
       tipe_vitamin: selectedVitamin,
       keterangan: formData.keterangan,
@@ -514,10 +614,14 @@ const DataPa = () => {
               value={selectedBalita}
               items={balitaItems}
               setOpen={setOpenBalita}
-              setValue={setSelectedBalita}
+              setValue={(value) => {
+                setSelectedBalita(value); // Update state ketika balita dipilih
+                handleBalitaSelect(value); // Panggil fungsi handleBalitaSelect untuk memproses data balita yang dipilih
+              }}
               setItems={setBalitaItems}
               placeholder="Pilih Balita"
               style={styles.dropdown}
+              onChangeValue={(value) => handleBalitaSelect(value)} 
               dropDownContainerStyle={styles.dropdownContainer}
             />
 
@@ -565,8 +669,6 @@ const DataPa = () => {
   onChangeText={(value) => handleInputChange('beratbadangram', value)}  // Meng-update state untuk gram
 />
 
-              
-
             </View>
             <TextInput
                 style={styles.input}
@@ -599,6 +701,10 @@ const DataPa = () => {
               style={styles.dropdown}
               dropDownContainerStyle={styles.dropdownContainer}
             />
+            <Text style={{color: 'black', fontWeight: 'bold' }}>Z-Score: {zScore !== null ? zScore.toFixed(2) : "Belum dihitung"}</Text>
+      <Text  style={{color: 'black', fontWeight: 'bold' }}>Status Gizi: {statusGizi !== null ? statusGizi : "Belum dihitung"}</Text>
+              
+
 
             <View style={{ marginBottom: 10 }}>
               <Text style={{ color: 'black', fontWeight: 'bold' }}>Vitamin</Text>
@@ -630,6 +736,17 @@ const DataPa = () => {
               style={styles.dropdown}
               dropDownContainerStyle={styles.dropdownContainer}
             />
+
+            <TextInput 
+              style={styles.input}
+              placeholder="Keterangan"
+              value={formData.keterangan}
+              multiline={true}  
+              numberOfLines={3}
+              placeholderTextColor="gray"
+              onChangeText={(value) => handleInputChange('keterangan', value)}
+            />
+
            <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
               <Text style={styles.saveButtonText}>Simpan</Text>
             </TouchableOpacity>
