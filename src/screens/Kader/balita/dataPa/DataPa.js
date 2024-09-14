@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList, Modal, TextInput } from 'react-native'
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList, Modal, TextInput, Alert } from 'react-native'
 import moment from 'moment';
 import IconMaterial from 'react-native-vector-icons/MaterialCommunityIcons';
 import Icon from 'react-native-vector-icons/FontAwesome';
@@ -13,180 +13,50 @@ import Config from 'react-native-config';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { jwtDecode } from 'jwt-decode';
-const dummyData = [
-  {
-    id: 1,
-    nama_balita: 'Balita 1',
-    Nama_Ibu: 'Ibu 1',
-    Nik_Balita: '1234',
-    gizi: 'Berat Badan Kurang',
-    umur: "06 bulan 1 tahun",
-    BeratBadan: '0.6 kg',
-    tanggalPemeriksaan: 'Rabu, 11 November 2024',
-  },
-  {
-    id: 2,
-    nama_balita: 'Balita 2',
-    Nama_Ibu: 'Ibu 2',
-    Nik_Balita: '56789',
-    gizi: 'Berat Badan Normal',
-    umur: "06 bulan 1 tahun",
-    BeratBadan: '0.6 kg',
-    tanggalPemeriksaan: 'Rabu, 11 November 2024'
-  },
-  {
-    id: 3,
-    nama_balita: 'Balita 3',
-    Nama_Ibu: 'Ibu 3',
-    Nik_Balita: '12456',
-    gizi: 'Berat Badan Lebih',
-    umur: "06 bulan 1 tahun",
-    BeratBadan: '0.6 kg',
-    tanggalPemeriksaan: 'Rabu, 11 November 2024'
-  },
-
-  {
-    id: 4,
-    nama_balita: 'Balita 4',
-    Nama_Ibu: 'Ibu 4',
-    Nik_Balita: '123456',
-    gizi: 'Berat Badan Lebih',
-    umur: "06 bulan 1 tahun",
-    BeratBadan: '0.6 kg',
-    tanggalPemeriksaan: 'Rabu, 11 November 2024'
-  },
-
-  {
-    id: 5,
-    nama_balita: 'Balita 5',
-    Nama_Ibu: 'Ibu 5',
-    Nik_Balita: '12345676',
-    gizi: 'Berat Badan Lebih',
-    umur: "06 bulan 1 tahun",
-    BeratBadan: '0.6 kg',
-    tanggalPemeriksaan: 'Rabu, 11 November 2024'
-  },
-
-  {
-    id: 6,
-    nama_balita: 'Balita 6',
-    Nama_Ibu: 'Ibu 6',
-    Nik_Balita: '123456789',
-    gizi: 'Berat Badan Lebih',
-    umur: "06 bulan 1 tahun",
-    BeratBadan: '0.6 kg',
-    tanggalPemeriksaan: 'Rabu, 11 November 2024'
-  },
 
 
-
-
-];
-
-
-
-const BeratBadan = [
-  {
-    gizi: 'Berat Badan Normal',
-    banyak: 10,
-    color: '#60E7DC', // Set your color
-  },
-
-  {
-    gizi: 'Berat Badan Kurang',
-    banyak: 10,
-    color: '#FFBB38', // Set your color
-  },
-
-  {
-    gizi: 'Berat Badan Lebih',
-    banyak: 10,
-    color: '#FF0000', // Set your color
-  },
-];
-
-const getGiziColor = (gizi) => {
-  switch (gizi) {
-    case 'Berat Badan Kurang':
-      return '#FFF5D9';
-    case 'Berat Badan Normal':
-      return '#DCFAF8';
-    case 'Berat Badan Lebih':
-      return '#FFE0E0';
+const getGiziColor = (status_gizi) => {
+  switch (status_gizi) {
+    case 'buruk':
+      return '#FFEEEE'; // Latar belakang merah lembut
+    case 'kurang':
+      return '#FFF4D1'; // Latar belakang kuning lembut
+    case 'baik':
+      return '#E0F7FA'; // Latar belakang hijau lembut (soft turquoise)
+    case 'lebih':
+      return '#FFE5DC'; // Latar belakang oranye lembut
+    case 'obesitas':
+      return '#F4CCCC'; // Latar belakang merah tua lembut
+    default:
+      return '#FFFFFF'; // Default warna putih jika status tidak ditemukan
   }
 }
 
-const getGiziTextColor = (gizi) => {
-  switch (gizi) {
-    case 'Berat Badan Kurang':
-      return 'orange';
-    case 'Berat Badan Normal':
-      return 'green';
-    case 'Berat Badan Lebih':
-      return '#FF0000';
+
+
+const getGiziTextColor = (status_gizi) => {
+  switch (status_gizi) {
+    case 'buruk':
+      return '#FF0000'; // Teks merah kuat
+    case 'kurang':
+      return '#FFBB38'; // Teks oranye kuat
+    case 'baik':
+      return '#00796B'; // Teks hijau kuat
+    case 'lebih':
+      return '#FF4500'; // Teks oranye gelap untuk lebih
+    case 'obesitas':
+      return '#8B0000'; // Teks merah tua kuat
+    default:
+      return 'black'; // Default warna hitam
   }
 }
 
-const renderItem = ({ item }) => (
-
-
-  <View style={styles.verificationCard}>
-    <View style={styles.verificationCardContent}>
-      <View style={{ flexDirection: 'column', width: '70%' }}>
-
-        <Text style={styles.verificationTextTitle}>{item.nama_balita}</Text>
-        <View style={{ flexDirection: 'row' }}>
-          <Icon name="user" size={20} color="#16DBCC" />
-          <Text style={styles.verificationText3}>{item.Nama_Ibu}</Text>
-        </View>
-
-        <View style={{ flexDirection: 'row' }}>
-          <Icon name="user" size={20} color="#16DBCC" />
-          <Text style={styles.verificationText3}>{item.Nik_Balita}</Text>
-        </View>
-
-        <View style={{ flexDirection: 'row' }}>
-          <Text style={styles.verificationText3}>{item.umur}</Text>
-        </View>
-        <View style={{ flexDirection: 'row' }}>
-          <Text style={styles.verificationText3}>{item.BeratBadan}</Text>
-        </View>
 
 
 
-      </View>
-      <View style={{ flexDirection: 'column', }}>
-        <View style={{ flexDirection: 'row' }}>
-          <View style={{ flexDirection: 'column', }}>
 
-            <TouchableOpacity
-              style={styles.deleteButton}
-              onPress={() =>
-                Alert.alert('Confirmation', `Are you sure you want to delete user ${item.username}?`, [
-                  { text: 'Cancel', style: 'cancel' },
-                  { text: 'OK', onPress: () => handleDeleteUser(item.id) },
-                ])
-              }
-            >
-              <Icon name="trash" size={24} color="#FF0000" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={{ ...styles.editButton, backgroundColor: getGiziColor(item.gizi) }}
-              onPress={() => handleEditPress(item)}
-            >
-              <Text style={{ color: getGiziTextColor(item.gizi), width: 80, fontSize: 8, textAlign: 'center' }}>{item.gizi}</Text>
-            </TouchableOpacity>
 
-          </View>
 
-        </View>
-      </View>
-    </View>
-    <View style={{ justifyContent: 'flex-end', marginRight: 10 }}>
-      <Text style={{ color: 'black', textAlign: 'right', fontSize: 10 }}> Tanggal Kunjungan : {item.tanggalPemeriksaan}</Text>
-    </View>
-  </View>
-);
 
 const DataPa = () => {
   const [printModalVisible, setPrintModalVisible] = useState(false);
@@ -208,10 +78,25 @@ const DataPa = () => {
   const [BalitaData, setBalitaData] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');  // State untuk menyimpan query pencarian
   const [filteredData, setFilteredData] = useState([]);  // Data yang akan ditampilkan setelah di-filter
-  const [selectedAntropometri , setSelectedAntropometri] = useState(null);
+  const [selectedAntropometri, setSelectedAntropometri] = useState(null);
   const [zScore, setZScore] = useState(null); // State untuk menyimpan hasil Z-Score
   const [statusGizi, setStatusGizi] = useState(null); // State untuk status gizi
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [selectedBalitaDetail, setSelectedBalitaDetail] = useState(null);
+  const [giziData, setGiziData] = useState([
+    { gizi: 'Buruk', banyak: 0, color: '#FF0000' }, // Merah untuk buruk
+    { gizi: 'Kurang', banyak: 0, color: '#FFBB38' }, // Kuning untuk kurang
+    { gizi: 'Baik', banyak: 0, color: '#60E7DC' }, // Hijau untuk baik
+    { gizi: 'Lebih', banyak: 0, color: '#FF7F50' }, // Oranye untuk lebih
+    { gizi: 'Obesitas', banyak: 0, color: '#8B0000' } // Warna gelap untuk obesitas
+  ]);
+  const [modalEditMode, setModalEditMode] = useState(false);
+  const [pageNumber, setPageNumber] = useState(1);  // Current page number
+  const [pageSize] = useState(10);  // Limit per page
+  const [isLoading, setIsLoading] = useState(false);
+  const [totalPages, setTotalPages] = useState(1);  // Total pages available
   const [formData, setFormData] = useState({
+    id: '', // Add this for edit mode
     idBalita: '',
     TanggalKunjungan: null,
     beratbadankg: '',
@@ -220,9 +105,9 @@ const DataPa = () => {
     keterangan: '',
     tipeVitamin: '',
     tipeImunisasi: '',
-    lingkarKepala : '',
+    lingkarKepala: '',
     idDokter: '',
-    keterangan : '' ,
+    keterangan: '',
   });
 
   useEffect(() => {
@@ -233,6 +118,118 @@ const DataPa = () => {
     setBalitaItems(dropdownData);  // Set dropdown items
   }, []);
 
+  // Handle editing mode
+  const handleEditPress = (item) => {
+    setModalEditMode(true); // Set the modal to edit mode
+    setFormData({
+      id: item.id, // Load the ID of the selected item
+      idBalita: item.balita,
+      TanggalKunjungan: item.tanggal_kunjungan ? new Date(item.tanggal_kunjungan) : null,
+      beratbadankg: item.berat_badan.toString().split('.')[0],
+      beratbadangram: item.berat_badan.toString().split('.')[1],
+      tinggibadan: item.tinggi_badan.toString(),
+      keterangan: item.keterangan,
+      tipeVitamin: item.tipe_vitamin,
+      tipeImunisasi: item.tipe_imunisasi,
+      lingkarKepala: item.lingkar_kepala.toString(),
+      idDokter: item.dokter.toString(),
+    });
+    setSelectedImunisasi(item.tipe_imunisasi);
+    setSelectedVitamin(item.tipe_vitamin);
+    setSelectedDokter(item.dokter);
+    setModalVisible(true);
+  };
+
+
+  const handleDeleteUser = async (id) => {
+    const token = await AsyncStorage.getItem('token');
+    try {
+      await axios.delete(`${Config.API_URL}/perkembangan-balita/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      alert('Data berhasil dihapus');
+      fetchPerkembanganBalita(); // Memperbarui data setelah penghapusan
+    } catch (error) {
+      console.error('Error details:', error);
+
+      // Cek apakah ada response dari server
+      if (error.response) {
+        console.error('Response Data:', error.response.data);
+        console.error('Response Status:', error.response.status);
+        console.error('Response Headers:', error.response.headers);
+      } else if (error.request) {
+        // Request dibuat tapi tidak ada respons dari server
+        console.error('Request Data:', error.request);
+      } else {
+        // Error lain, misalnya kesalahan konfigurasi dalam permintaan
+        console.error('Error Message:', error.message);
+      }
+
+      // Cetak seluruh error object
+      console.error('Full Error:', error);
+    }
+  };
+
+  const renderItem = ({ item }) => (
+
+
+    <TouchableOpacity style={styles.verificationCard} onPress={() => handleCardPress(item)}>
+      <View style={styles.verificationCardContent}>
+        <View style={{ flexDirection: 'column', width: '70%' }}>
+
+          <Text style={styles.verificationTextTitle}>{item.nama_balita}</Text>
+          <View style={{ flexDirection: 'row' }}>
+            <Icon name="user" size={20} color="#16DBCC" />
+            <Text style={styles.verificationText3}>{item.status_gizi}</Text>
+          </View>
+
+          <View style={{ flexDirection: 'row' }}>
+            <Icon name="user" size={20} color="#16DBCC" />
+            <Text style={styles.verificationText3}>{item.nik_balita}</Text>
+          </View>
+
+          <View style={{ flexDirection: 'row' }}>
+            <Text style={styles.verificationText3}>{item.umur_balita} bulan</Text>
+          </View>
+          <View style={{ flexDirection: 'row' }}>
+            <Text style={styles.verificationText3}>{item.keterangan}</Text>
+          </View>
+
+
+
+        </View>
+        <View style={{ flexDirection: 'column', }}>
+          <View style={{ flexDirection: 'row' }}>
+            <View style={{ flexDirection: 'column', }}>
+
+              <TouchableOpacity
+                style={styles.deleteButton}
+                onPress={() =>
+                  Alert.alert('Confirmation', `Are you sure you want to delete user ${item.username}?`, [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'OK', onPress: () => handleDeleteUser(item.id) },
+                  ])
+                }
+              >
+                <Icon name="trash" size={24} color="#FF0000" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{ ...styles.editButton, backgroundColor: getGiziColor(item.status_gizi) }}
+                onPress={() => handleEditPress(item)}
+              >
+                <Text style={{ color: getGiziTextColor(item.status_gizi), width: 80, fontSize: 14, textAlign: 'center' }}>{item.status_gizi}</Text>
+              </TouchableOpacity>
+
+            </View>
+
+          </View>
+        </View>
+      </View>
+      <View style={{ justifyContent: 'flex-end', marginRight: 10 }}>
+        <Text style={{ color: 'black', textAlign: 'right', fontSize: 10 }}> Tanggal Kunjungan : {item.tanggal_kunjungan}</Text>
+      </View>
+    </TouchableOpacity>
+  );
 
   const handleSearch = (query) => {
     setSearchQuery(query);
@@ -240,16 +237,16 @@ const DataPa = () => {
       setFilteredData(perkembangan_balita);  // Jika query kosong, tampilkan semua data
     } else {
       // Filter data sesuai dengan nama balita atau nama ibu
-      const filtered = dummyData.filter((item) =>
+      const filtered = perkembangan_balita.filter((item) =>
         item.nama_balita.toLowerCase().includes(query.toLowerCase()) ||
-        item.Nama_Ibu.toLowerCase().includes(query.toLowerCase())
+        item.status_gizi.toLowerCase().includes(query.toLowerCase())
       );
       setFilteredData(filtered);
     }
   };
 
-   // Fetch Balita and Dokter data
-   useEffect(() => {
+  // Fetch Balita and Dokter data
+  useEffect(() => {
     fetchPerkembanganBalita();
     fetchBalita();
     fetchDokter();
@@ -261,11 +258,112 @@ const DataPa = () => {
       const response = await axios.get(`${Config.API_URL}/perkembangan-balita`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setPerkembangan_balita(response.data);
-      console.log(response.data);
+  
+      const pemeriksaanData = response.data;
+  
+      // Ambil semua ID balita dari data pemeriksaan
+      const balitaIds = pemeriksaanData.map(pemeriksaan => pemeriksaan.balita);
+  
+      // Fetch data balita berdasarkan ID balita
+      const balitaPromises = balitaIds.map(id => axios.get(`${Config.API_URL}/balita/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }));
+  
+      // Tunggu semua request selesai
+      const balitaResponses = await Promise.all(balitaPromises);
+      const balitaData = balitaResponses.map(response => response.data);
+  
+      // Gabungkan data pemeriksaan balita dengan data balita
+      const mergedData = pemeriksaanData.map((pemeriksaan, index) => ({
+        ...pemeriksaan,
+        nama_balita: balitaData[index].nama_balita,
+        nik_balita: balitaData[index].nik_balita,
+        umur_balita: moment().diff(moment(balitaData[index].tanggal_lahir_balita), 'months'), // Menghitung umur dalam bulan
+        createdAt: pemeriksaan.createdAt, // Pastikan createdAt tersedia di data pemeriksaan
+      }));
+  
+      // Urutkan data berdasarkan createdAt dalam urutan menurun (data terbaru di atas)
+      mergedData.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  
+      // --- Logic for PieChart (latest data for each balita) ---
+      const uniqueBalitaMap = new Map();
+      mergedData.forEach((item) => {
+        if (!uniqueBalitaMap.has(item.balita)) {
+          uniqueBalitaMap.set(item.balita, item); // Only keep the latest entry for each balita
+        }
+      });
+  
+      // Dapatkan data terbaru untuk setiap balita
+      const filteredPemeriksaanDataForPie = Array.from(uniqueBalitaMap.values());
+  
+      // Menghitung status gizi untuk PieChart
+      const giziCounts = {
+        buruk: 0,
+        kurang: 0,
+        baik: 0,
+        lebih: 0,
+        obesitas: 0,
+      };
+  
+      filteredPemeriksaanDataForPie.forEach(item => {
+        if (item.status_gizi in giziCounts) {
+          giziCounts[item.status_gizi]++;
+        }
+      });
+  
+      // Update giziData berdasarkan hitungan status gizi
+      setGiziData([
+        { gizi: 'Buruk', banyak: giziCounts.buruk, color: '#FF0000' }, // Merah untuk buruk
+        { gizi: 'Kurang', banyak: giziCounts.kurang, color: '#FFBB38' }, // Kuning untuk kurang
+        { gizi: 'Baik', banyak: giziCounts.baik, color: '#60E7DC' }, // Hijau untuk baik
+        { gizi: 'Lebih', banyak: giziCounts.lebih, color: '#FF7F50' }, // Oranye untuk lebih
+        { gizi: 'Obesitas', banyak: giziCounts.obesitas, color: '#8B0000' } // Warna gelap untuk obesitas
+      ]);
+  
+      // --- Pagination Logic ---
+      const totalItems = mergedData.length; // Total items after merging
+      const pageSize = 10; // Set page size
+      const totalPages = Math.ceil(totalItems / pageSize); // Calculate total pages
+  
+      // Set data for the first page (initial page load)
+      const paginatedData = mergedData.slice(0, pageSize); // Slice data for the first page
+  
+      // Set state for FlatList and pagination
+      setPerkembangan_balita(mergedData);
+      setFilteredData(paginatedData); // Set initial data for FlatList
+      setTotalPages(totalPages); // Set total pages for pagination
+      setPageNumber(1); // Initialize page number
+  
+      console.log(mergedData);
     } catch (error) {
+      console.error('Error details:', error);
     }
-  }
+  };
+  
+
+  const handleNextPage = () => {
+    if (pageNumber < totalPages) {
+      const nextPage = pageNumber + 1;
+      setPageNumber(nextPage);
+      // Ambil data berdasarkan halaman berikutnya
+      setFilteredData(perkembangan_balita.slice((nextPage - 1) * pageSize, nextPage * pageSize));
+    }
+  };
+  
+  // Function to handle previous page
+  const handlePreviousPage = () => {
+    if (pageNumber > 1) {
+      const prevPage = pageNumber - 1;
+      setPageNumber(prevPage);
+      // Ambil data berdasarkan halaman sebelumnya
+      setFilteredData(perkembangan_balita.slice((prevPage - 1) * pageSize, prevPage * pageSize));
+    }
+  };
+  
+  const handleCardPress = (item) => {
+    setSelectedBalitaDetail(item);  // Set data balita yang dipilih
+    setDetailModalVisible(true);    // Tampilkan modal detail
+  };
 
   const fetchBalita = async () => {
     const token = await AsyncStorage.getItem('token');
@@ -280,7 +378,7 @@ const DataPa = () => {
       setBalitaItems(formattedBalita);
     } catch (error) {
       console.error('Error details:', error);
-    
+
       // Cek apakah ada response dari server
       if (error.response) {
         console.error('Response Data:', error.response.data);
@@ -293,7 +391,7 @@ const DataPa = () => {
         // Error lain, misalnya kesalahan konfigurasi dalam permintaan
         console.error('Error Message:', error.message);
       }
-    
+
       // Cetak seluruh error object
       console.error('Full Error:', error);
     }
@@ -329,9 +427,9 @@ const DataPa = () => {
         selectedAntropometri = antropometriGirl.find((item) => item.umur === umurDalamBulan);
       }
       setSelectedAntropometri(selectedAntropometri);
-    } catch (error) { 
+    } catch (error) {
       console.error('Error details:', error);
-    
+
       // Cek apakah ada response dari server
       if (error.response) {
         console.error('Response Data:', error.response.data);
@@ -344,7 +442,7 @@ const DataPa = () => {
         // Error lain, misalnya kesalahan konfigurasi dalam permintaan
         console.error('Error Message:', error.message);
       }
-    
+
       // Cetak seluruh error object
       console.error('Full Error:', error);
     }
@@ -377,8 +475,8 @@ const DataPa = () => {
       setStatusGizi(statusGizi);
     }
   }, [formData.beratbadankg, formData.beratbadangram, selectedAntropometri]);
-  
-  
+
+
   const fetchDokter = async () => {
     const token = await AsyncStorage.getItem('token');
     try {
@@ -413,35 +511,26 @@ const DataPa = () => {
       dokter: selectedDokter,
       kader: id,  // Add kader id dynamically or from token
     };
-
     try {
-      console.log(newFormData);
-      console.log(`${Config.API_URL}/perkembangan-balita/`)
-      await axios.post(`${Config.API_URL}/perkembangan-balita/`, newFormData, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setModalVisible(false);
-      alert('Data berhasil disimpan');
-      // Optionally, refresh the list or perform other actions
-    } catch (error) {
-      // Tangkap semua informasi error
-      console.error('Error details:', error);
-    
-      // Cek apakah ada response dari server
-      if (error.response) {
-        console.error('Response Data:', error.response.data);
-        console.error('Response Status:', error.response.status);
-        console.error('Response Headers:', error.response.headers);
-      } else if (error.request) {
-        // Request dibuat tapi tidak ada respons dari server
-        console.error('Request Data:', error.request);
+      if (modalEditMode) {
+        // If editing, update the existing record
+        await axios.put(`${Config.API_URL}/perkembangan-balita/${formData.id}`, newFormData, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        alert('Data berhasil diperbarui');
       } else {
-        // Error lain, misalnya kesalahan konfigurasi dalam permintaan
-        console.error('Error Message:', error.message);
+        // If adding new, create a new record
+        await axios.post(`${Config.API_URL}/perkembangan-balita`, newFormData, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        alert('Data berhasil disimpan');
       }
-    
-      // Cetak seluruh error object
-      console.error('Full Error:', error);
+      resetForm();
+      setModalVisible(false);
+      setModalEditMode(false); // Reset edit mode after saving
+      fetchPerkembanganBalita(); // Optionally, refresh the list or perform other actions
+    } catch (error) {
+      console.error('Error saving data:', error);
     }
   };
 
@@ -464,6 +553,28 @@ const DataPa = () => {
     { label: 'Cacing', value: 'Cacing' }
   ];
 
+  const resetForm = () => {
+    setFormData({
+      id: '', // Reset id for new entry
+      idBalita: '',
+      TanggalKunjungan: null,
+      beratbadankg: '',
+      beratbadangram: '',
+      tinggibadan: '',
+      keterangan: '',
+      tipeVitamin: '',
+      tipeImunisasi: '',
+      lingkarKepala: '',
+      idDokter: '',
+    });
+    setSelectedBalita(null);  // Reset selectedBalita
+    setSelectedImunisasi(null);  // Reset selectedImunisasi
+    setSelectedVitamin(null);  // Reset selectedVitamin
+    setSelectedDokter(null);  // Reset selectedDokter
+    setStatusGizi('');
+    setModalVisible(false);  // Close the modal
+    setModalEditMode(false);  // Reset edit mode
+  };
 
   const handleAddChildPress = () => {
     setModalVisible(true);
@@ -476,7 +587,7 @@ const DataPa = () => {
       [name]: value,
     }));
   };
-  
+
 
   const handlePrintPress = () => {
     setPrintModalVisible(true);
@@ -504,10 +615,9 @@ const DataPa = () => {
         <TouchableOpacity style={styles.cardBox}>
           <View style={styles.cardHeader}>
             <PieChart
-              data={BeratBadan.map((item) => ({
-                value: item.banyak,
-                color: item.color,
-
+              data={giziData.map((item) => ({
+                value: item.banyak, // Jumlah balita per status gizi
+                color: item.color,  // Warna untuk status gizi
               }))}
               radius={50} // Adjust the radius to change the size of the pie chart
               innerRadius={30} // Adjust the inner radius for a donut chart
@@ -523,17 +633,25 @@ const DataPa = () => {
           <View style={styles.cardContent}>
             <Text style={styles.cardHeaderText}>Berat Badan</Text>
 
-            <View style={{ flexDirection: 'row', marginTop: 20, width: '80%' }}>
-              <View style={{ flexDirection: 'column', flex: 1 }}>
-                <View style={{ backgroundColor: '#FFBB38', width: 80, height: 10, borderRadius: 5 }}></View>
-                <Text style={styles.verificationText4}>Kurang Ideal</Text>
-              </View>
-              <View style={{ flexDirection: 'column', flex: 1, marginHorizontal: 1 }}>
-                <View style={{ backgroundColor: '#60E7DC', width: 80, height: 10, borderRadius: 5 }}></View>
-                <Text style={styles.verificationText4}>Normal</Text>
-              </View>
+            <View style={{ flexDirection: 'row', marginTop: 20, width: '100%' }}>
               <View style={{ flexDirection: 'column', flex: 1 }}>
                 <View style={{ backgroundColor: '#FF0000', width: 80, height: 10, borderRadius: 5 }}></View>
+                <Text style={styles.verificationText4}>Buruk</Text>
+              </View>
+              <View style={{ flexDirection: 'column', flex: 1 }}>
+                <View style={{ backgroundColor: '#FFBB38', width: 80, height: 10, borderRadius: 5 }}></View>
+                <Text style={styles.verificationText4}>Kurang</Text>
+              </View>
+              <View style={{ flexDirection: 'column', flex: 1 }}>
+                <View style={{ backgroundColor: '#60E7DC', width: 80, height: 10, borderRadius: 5 }}></View>
+                <Text style={styles.verificationText4}>Baik</Text>
+              </View>
+              <View style={{ flexDirection: 'column', flex: 1 }}>
+                <View style={{ backgroundColor: '#FF7F50', width: 80, height: 10, borderRadius: 5 }}></View>
+                <Text style={styles.verificationText4}>Lebih</Text>
+              </View>
+              <View style={{ flexDirection: 'column', flex: 1 }}>
+                <View style={{ backgroundColor: '#8B0000', width: 50, height: 10, borderRadius: 5 }}></View>
                 <Text style={styles.verificationText4}>Obesitas</Text>
               </View>
             </View>
@@ -543,7 +661,7 @@ const DataPa = () => {
       <View>
         <FlatList
           data={filteredData}
-          style={{ backgroundColor: '#fff', marginTop: 20, borderRadius: 2, marginHorizontal: 20, maxHeight: 400 }}
+          style={{ backgroundColor: '#fff', marginTop: 20, borderRadius: 2, marginHorizontal: 20, maxHeight: 350 }}
           renderItem={renderItem}
           keyExtractor={(item) => item.id.toString()}
 
@@ -558,7 +676,25 @@ const DataPa = () => {
       <TouchableOpacity style={styles.addButton} onPress={handleAddChildPress}>
         <Icon name="plus" size={30} color="white" />
       </TouchableOpacity>
-
+      <View style={styles.paginationContainer}>
+        <TouchableOpacity
+          style={[styles.pageButton, pageNumber === 1 && styles.disabledButton]}
+          onPress={handlePreviousPage}
+          disabled={pageNumber === 1}
+        >
+          <Text style={styles.pageButtonText}><Icon name="angle-left" size={30} color="white"/> </Text>
+        </TouchableOpacity>
+        <Text style={styles.pageInfo}>
+          Page {pageNumber} of {totalPages}
+        </Text>
+        <TouchableOpacity
+          style={[styles.pageButton, pageNumber === totalPages && styles.disabledButton]}
+          onPress={handleNextPage}
+          disabled={pageNumber === totalPages}
+        >
+          <Text style={styles.pageButtonText}><Icon name="angle-right" size={30} color="white"/></Text>
+        </TouchableOpacity>
+      </View>
       {/* Print Modal */}
       <Modal
         transparent={true}
@@ -605,7 +741,7 @@ const DataPa = () => {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Tambah Data PA</Text>
+            <Text style={styles.modalTitle}>{modalEditMode ? 'Edit Data PA' : 'Tambah Data PA'}</Text>
             <View style={{ marginBottom: 10 }}>
               <Text style={{ color: 'black', fontWeight: 'bold' }}>Cek Gizi</Text>
             </View>
@@ -621,7 +757,7 @@ const DataPa = () => {
               setItems={setBalitaItems}
               placeholder="Pilih Balita"
               style={styles.dropdown}
-              onChangeValue={(value) => handleBalitaSelect(value)} 
+              onChangeValue={(value) => handleBalitaSelect(value)}
               dropDownContainerStyle={styles.dropdownContainer}
             />
 
@@ -650,42 +786,42 @@ const DataPa = () => {
             />
 
             <View style={{ flexDirection: 'row' }}>
-            <TextInput
-  style={styles.input1}
-  placeholder="Berat badan (Kg)"
-  keyboardType="numeric"
-  maxLength={16}
-  placeholderTextColor="gray"
-  value={formData.beratbadankg}  // Mengikat nilai input ke state
-  onChangeText={(value) => handleInputChange('beratbadankg', value)}  // Meng-update state untuk kg
-/>
+              <TextInput
+                style={styles.input1}
+                placeholder="Berat badan (Kg)"
+                keyboardType="numeric"
+                maxLength={16}
+                placeholderTextColor="gray"
+                value={formData.beratbadankg}  // Mengikat nilai input ke state
+                onChangeText={(value) => handleInputChange('beratbadankg', value)}  // Meng-update state untuk kg
+              />
 
-<TextInput
-  style={styles.input1}
-  placeholder="Berat Badan (Gram)"
-  value={formData.beratbadangram}  // Mengikat nilai input ke state
-  keyboardType="numeric"
-  placeholderTextColor="gray"
-  onChangeText={(value) => handleInputChange('beratbadangram', value)}  // Meng-update state untuk gram
-/>
+              <TextInput
+                style={styles.input1}
+                placeholder="Berat Badan (Gram)"
+                value={formData.beratbadangram}  // Mengikat nilai input ke state
+                keyboardType="numeric"
+                placeholderTextColor="gray"
+                onChangeText={(value) => handleInputChange('beratbadangram', value)}  // Meng-update state untuk gram
+              />
 
             </View>
             <TextInput
-                style={styles.input}
-                placeholder="Lingkar kepala (cm)"
-                value={formData.lingkarKepala}
-                keyboardType="numeric"
-                placeholderTextColor="gray"
-                onChangeText={(value) => handleInputChange('lingkarKepala', value)}
-              />
-           <TextInput
-  style={styles.input}
-  placeholder="Tinggi Badan (Cm)"
-  keyboardType="numeric"
-  placeholderTextColor="gray"
-  value={formData.tinggibadan}
-  onChangeText={(value) => handleInputChange('tinggibadan', value)} 
-/>
+              style={styles.input}
+              placeholder="Lingkar kepala (cm)"
+              value={formData.lingkarKepala}
+              keyboardType="numeric"
+              placeholderTextColor="gray"
+              onChangeText={(value) => handleInputChange('lingkarKepala', value)}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Tinggi Badan (Cm)"
+              keyboardType="numeric"
+              placeholderTextColor="gray"
+              value={formData.tinggibadan}
+              onChangeText={(value) => handleInputChange('tinggibadan', value)}
+            />
 
             <View style={{ marginBottom: 10 }}>
               <Text style={{ color: 'black', fontWeight: 'bold' }}>Imunisasi</Text>
@@ -696,14 +832,15 @@ const DataPa = () => {
               items={tipeImunisasiItems}
               setOpen={setOpenImunisasi}
               setValue={setSelectedImunisasi}
-              setItems={() => {}}
+              setItems={() => { }}
               placeholder="Pilih Imunisasi"
               style={styles.dropdown}
               dropDownContainerStyle={styles.dropdownContainer}
             />
-            <Text style={{color: 'black', fontWeight: 'bold' }}>Z-Score: {zScore !== null ? zScore.toFixed(2) : "Belum dihitung"}</Text>
-      <Text  style={{color: 'black', fontWeight: 'bold' }}>Status Gizi: {statusGizi !== null ? statusGizi : "Belum dihitung"}</Text>
-              
+          <View style={{ marginBottom: 10 ,flexDirection:'row',justifyContent:'space-between'}}>
+            <Text style={{ color: 'black', fontWeight: 'bold' }}>Z-Score: {zScore !== null ? zScore.toFixed(2) : "Belum dihitung"},</Text>
+            <Text style={{ color: 'black', fontWeight: 'bold' }}>Status Gizi: {statusGizi !== null ? statusGizi : "Belum dihitung"}</Text>
+</View>
 
 
             <View style={{ marginBottom: 10 }}>
@@ -716,12 +853,12 @@ const DataPa = () => {
               items={tipeVitaminItems}
               setOpen={setOpenVitamin}
               setValue={setSelectedVitamin}
-              setItems={() => {}}
+              setItems={() => { }}
               placeholder="Pilih Vitamin"
               style={styles.dropdown}
               dropDownContainerStyle={styles.dropdownContainer}
             />
- <View style={{ marginBottom: 10 }}>
+            <View style={{ marginBottom: 10 }}>
               <Text style={{ color: 'black', fontWeight: 'bold' }}>Dokter</Text>
             </View>
             {/* Dropdown for Dokter */}
@@ -737,22 +874,68 @@ const DataPa = () => {
               dropDownContainerStyle={styles.dropdownContainer}
             />
 
-            <TextInput 
+            <TextInput
               style={styles.input}
               placeholder="Keterangan"
               value={formData.keterangan}
-              multiline={true}  
+              multiline={true}
               numberOfLines={3}
               placeholderTextColor="gray"
               onChangeText={(value) => handleInputChange('keterangan', value)}
             />
 
-           <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-              <Text style={styles.saveButtonText}>Simpan</Text>
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <TouchableOpacity style={styles.cancelButton} onPress={resetForm}>
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+                <Text style={styles.saveButtonText}>Simpan</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
+
+      <Modal
+        transparent={true}
+        visible={detailModalVisible}
+        animationType="slide"
+        onRequestClose={() => setDetailModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Detail Perkembangan Balita</Text>
+
+            {selectedBalitaDetail && (
+              <View>
+                <Text style={{ fontWeight: 'bold', marginBottom: 10, color: 'black' }}>Nama Balita: {selectedBalitaDetail.nama_balita}</Text>
+                <Text style={{ marginBottom: 10, color: 'black' }}>NIK Balita: {selectedBalitaDetail.nik_balita}</Text>
+                <Text style={{ marginBottom: 10, color: 'black' }}>Umur: {selectedBalitaDetail.umur_balita} bulan</Text>
+                <Text style={{ marginBottom: 10, color: 'black' }}>Status Gizi: {selectedBalitaDetail.status_gizi}</Text>
+                <Text style={{ marginBottom: 10, color: 'black' }}>Keterangan: {selectedBalitaDetail.keterangan}</Text>
+                <Text style={{ marginBottom: 10, color: 'black' }}>Tanggal Kunjungan: {selectedBalitaDetail.tanggal_kunjungan}</Text>
+              </View>
+            )}
+
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 20 }}>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => handleEditPress(selectedBalitaDetail)}
+              >
+                <Text style={styles.modalButtonText}>Edit</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setDetailModalVisible(false)}
+              >
+                <Text style={styles.modalButtonText}>Tutup</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
     </View>
   )
 }
@@ -1030,8 +1213,8 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     justifyContent: 'center',
     alignItems: 'center',
-
   },
+
   deleteButton: {
     flex: 1,
     marginHorizontal: 25,
@@ -1173,6 +1356,30 @@ const styles = StyleSheet.create({
 
 
   },
+  paginationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 10,
+    marginBottom: 20,
+  },
+  pageButton: {
+    backgroundColor: '#008EB3',
+    padding: 10,
+    borderRadius: 5,
+    marginHorizontal: 25,
+  },
+  pageButtonText: {
+    color: 'white',
+    fontSize: 16,
+  },
+  pageInfo: {
+    fontSize: 12,
+    color: 'black',
+  },
+  disabledButton: {
+    backgroundColor: '#ccc',
+  },
   modalTitle: {
     fontSize: 18,
     marginBottom: 20,
@@ -1196,7 +1403,7 @@ const styles = StyleSheet.create({
     padding: 10,
     backgroundColor: '#DC143C',
     borderRadius: 5,
-    width: '100%',
+    width: '40%',
     alignItems: 'center',
   },
   datePicker: {
@@ -1238,6 +1445,20 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 
+  cancelButton: {
+    backgroundColor: 'red',
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+    marginBottom: 10,
+  },
+
+  cancelButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
 
 
 });
