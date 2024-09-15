@@ -64,7 +64,7 @@ const DashboardLansia = () => {
                         </View>
                         <Text style={styles.buttonText}>Data Wali</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={{ width: '20%' }}>
+                    <TouchableOpacity style={{ width: '20%' }} onPress={() => navigation.navigate('DataPemeriksaanLansia')}>
                         <View style={styles.bottomButton}>
                             <IconMaterial name="calendar" size={30} color='#F37676' />
                         </View>

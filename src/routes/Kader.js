@@ -1,9 +1,9 @@
 import React from 'react';
-import { SafeAreaView, StyleSheet, Text, View, TouchableOpacity,Alert } from 'react-native';
+import { SafeAreaView, StyleSheet, Text, View, TouchableOpacity, Alert, Image} from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { createDrawerNavigator,DrawerContentScrollView, DrawerItemList } from '@react-navigation/drawer';
+import { createDrawerNavigator, DrawerContentScrollView, DrawerItemList } from '@react-navigation/drawer';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import * as Animatable from 'react-native-animatable';
 import HeaderKader from '../components/HeaderKader';
@@ -31,6 +31,8 @@ import DataWali from '../screens/Kader/lansia/DataWali/DataWali.js';
 import AyahForm from '../screens/Kader/balita/dataOrangTua/AyahForm';
 import IbuForm from '../screens/Kader/balita/dataOrangTua/IbuForm';
 import DetailLansia from '../screens/Kader/lansia/dataLansia/DetailLansia.js';
+import DataPemeriksaanLansia from '../screens/Kader/lansia/DataPemeriksaan/DataPemeriksaanLansia.js';
+import profile from '../assets/images/anakcew.png'
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 const Drawer = createDrawerNavigator();
@@ -150,7 +152,8 @@ const CustomDrawerContent = (props) => {
             await AsyncStorage.removeItem('userEmail');
 
             // Arahkan kembali ke layar login
-            
+            navigation.navigate('App');
+
           }
         }
       ]
@@ -159,25 +162,36 @@ const CustomDrawerContent = (props) => {
 
   return (
     <DrawerContentScrollView {...props}>
-      <DrawerItemList {...props} />
-      
-      {/* Tombol Logout */}
+    {/* Profile Picture and Edit Icon */}
+    <View style={styles.profileContainer}>
+      <View style={styles.profilePictureWrapper}>
+        <Image
+          source={profile} // Ganti dengan gambar profil yang Anda inginkan
+          style={styles.profilePicture}
+        />
+        <TouchableOpacity style={styles.editIcon}>
+          <MaterialCommunityIcons name="pencil" size={20} color="white" />
+        </TouchableOpacity>
+      </View>
+      <Text style={styles.profileName}>Nama Pengguna</Text>
+    </View>
+
+    <DrawerItemList {...props} />
+
+    {/* Tombol Logout */}
+    <View style={styles.logoutContainer}>
       <TouchableOpacity
-        style={{
-          marginTop: 20,
-          padding: 10,
-          backgroundColor: '#f00',
-          borderRadius: 10,
-          justifyContent: 'center',
-          alignItems: 'center',
-        }}
+        style={styles.logoutButton}
         onPress={handleLogout}
       >
-        <Text style={{ color: '#fff', fontWeight: 'bold' }}>Logout</Text>
+        <MaterialCommunityIcons name="logout" size={20} color="white" />
+        <Text style={styles.logoutText}>Logout</Text>
       </TouchableOpacity>
-    </DrawerContentScrollView>
-  );
+    </View>
+  </DrawerContentScrollView>
+);
 };
+
 
 // Stack Navigator
 const DrawerNavigator = () => {
@@ -201,13 +215,13 @@ const DrawerNavigator = () => {
         options={{
           header: ({ navigation }) => <HeaderKader openDrawer={() => navigation.openDrawer()} />,
         }}
-        />
+      />
       <Drawer.Screen
-      name='Info Aplikasi'
-      component={InfoAplikasi}
-      options={{
-        header: ({navigation}) => <HeaderKader openDrawer={() => navigation.openDrawer()}/>,
-      }}
+        name='Info Aplikasi'
+        component={InfoAplikasi}
+        options={{
+          header: ({ navigation }) => <HeaderKader openDrawer={() => navigation.openDrawer()} />,
+        }}
       />
     </Drawer.Navigator>
   );
@@ -216,11 +230,11 @@ const DrawerNavigator = () => {
 const StackNavigator = () => {
   return (
     <Stack.Navigator>
-     
+
       {/* Home Screen with HeaderKader */}
       <Stack.Screen
         name="Dashboard"
-        component={TabNavigator} 
+        component={TabNavigator}
         options={{
           header: ({ navigation }) => <HeaderKader openDrawer={() => navigation.openDrawer()} />, // Show HeaderKader only on the dashboard
         }}
@@ -257,15 +271,17 @@ const StackNavigator = () => {
         options={{ headerShown: false }} // Hide header for DataImunisasiAnak
       />
 
-        
-        <Stack.Screen name="DetailOrtu" component={DetailOrtu} options={{headerShown: false}} />
-       <Stack.Screen name="AyahForm" component={AyahForm} options={{headerShown: false}} />
-       <Stack.Screen name="IbuForm" component={IbuForm} options={{headerShown: false}} />
-      <Stack.Screen name="EditIbuForm" component={EditIbuForm} options={{headerShown: false}} />
-      <Stack.Screen name="EditAyahForm" component={EditAyahForm} options={{headerShown: false}} />
-      <Stack.Screen name="DataWali" component={DataWali} options={{headerShown: false}} />
-        <Stack.Screen name="DetailLansia" component={DetailLansia} options={{headerShown: false}} />
-        <Stack.Screen name="DetailWali" component={DetailWali} options={{headerShown: false}} />
+
+      <Stack.Screen name="DetailOrtu" component={DetailOrtu} options={{ headerShown: false }} />
+      <Stack.Screen name="AyahForm" component={AyahForm} options={{ headerShown: false }} />
+      <Stack.Screen name="IbuForm" component={IbuForm} options={{ headerShown: false }} />
+      <Stack.Screen name="EditIbuForm" component={EditIbuForm} options={{ headerShown: false }} />
+      <Stack.Screen name="EditAyahForm" component={EditAyahForm} options={{ headerShown: false }} />
+      <Stack.Screen name="DataWali" component={DataWali} options={{ headerShown: false }} />
+      <Stack.Screen name="DetailLansia" component={DetailLansia} options={{ headerShown: false }} />
+      <Stack.Screen name="DetailWali" component={DetailWali} options={{ headerShown: false }} />
+      <Stack.Screen name="DataPemeriksaanLansia" component={DataPemeriksaanLansia} options={{ headerShown: false }} />
+      <Stack.Screen name="App" component={App} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 };
@@ -275,8 +291,8 @@ const StackNavigator = () => {
 
 const Kader = () => {
   return (
-    <NavigationContainer independent = {true}>
-      <DrawerNavigator  />
+    <NavigationContainer independent={true}>
+      <DrawerNavigator />
     </NavigationContainer>
   );
 };
@@ -293,6 +309,52 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 16,
   },
+  profileContainer: {
+    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  profilePictureWrapper: {
+    position: 'relative',
+  },
+  profilePicture: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+  },
+  editIcon: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#008EB3',
+    borderRadius: 15,
+    padding: 5,
+  },
+  profileName: {
+    marginTop: 10,
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'black',
+  },
+  logoutContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 50, // Adjust the margin to center the button
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    backgroundColor: '#f00',
+    borderRadius: 10,
+    justifyContent: 'center',
+    width: '80%',
+  },
+  logoutText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    marginLeft: 10,
+  },
 });
-
 export default Kader;

@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, Image, TouchableOpacity, TextInput, Modal, ActivityIndicator, ScrollView } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import Header from '../../../Kader/componentKader/Header'
-import { BiodataSection, PASection, ImunisasiSection } from '../../componentKader/DataAnak'
+import { BiodataSection, PASection, KegiatanSection } from '../../componentKader/DataAnak'
 import cowok from '../../../../assets/images/anakcow.png';
 import cewek from '../../../../assets/images/anakcew.png';
 import Icon from 'react-native-vector-icons/FontAwesome';
@@ -49,9 +49,9 @@ const DetailAnak = ({ route }) => {
       case 'Biodata':
         return <BiodataSection dataAnak={dataAnak} />;
       case 'PA':
-        return <PASection />;
-      case 'Imunisasi':
-        return <ImunisasiSection />;
+        return <PASection dataAnak={dataAnak} />;
+      case 'Kegiatan':
+        return <KegiatanSection dataAnak={dataAnak}/>;
       default:
         return null;
     }
@@ -259,11 +259,11 @@ const DetailAnak = ({ route }) => {
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.tabButton, activeTab === 'Imunisasi' && styles.activeTabButton]}
-              onPress={() => setActiveTab('Imunisasi')}
+              style={[styles.tabButton, activeTab === 'Kegiatan' && styles.activeTabButton]}
+              onPress={() => setActiveTab('Kegiatan')}
             >
-              <Text style={[styles.tabText, activeTab === 'Imunisasi' && styles.activeTabText]}>
-                DATA IMUNISASI
+              <Text style={[styles.tabText, activeTab === 'Kegiatan' && styles.activeTabText]}>
+                DATA KEGIATAN
               </Text>
             </TouchableOpacity>
           </View>

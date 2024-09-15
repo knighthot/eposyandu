@@ -13,7 +13,7 @@ import Config from 'react-native-config';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { jwtDecode } from 'jwt-decode';
-
+import ErrorModal from '../../../../components/modals/ErrorModal';
 
 const getGiziColor = (status_gizi) => {
   switch (status_gizi) {
@@ -71,7 +71,6 @@ const DataPa = () => {
   const [dokterItems, setDokterItems] = useState([]);  // Data for Dokter dropdown
   const [selectedBalita, setSelectedBalita] = useState(null);  // Selected Balita ID
   const [selectedDokter, setSelectedDokter] = useState(null);  // Selected Dokter ID
-  const [openStatusGizi, setOpenStatusGizi] = useState(false);  // Dropdown for Status Gizi
   const [balitaItems, setBalitaItems] = useState([]);
   const [perkembangan_balita, setPerkembangan_balita] = useState([]);
   const navigation = useNavigation();
@@ -94,6 +93,8 @@ const DataPa = () => {
   const [pageNumber, setPageNumber] = useState(1);  // Current page number
   const [pageSize] = useState(10);  // Limit per page
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessages, setErrorMessages] = useState([]);
+  const [isErrorModalVisible, setIsErrorModalVisible] = useState(false);
   const [totalPages, setTotalPages] = useState(1);  // Total pages available
   const [formData, setFormData] = useState({
     id: '', // Add this for edit mode
@@ -123,7 +124,6 @@ const DataPa = () => {
     setModalEditMode(true); // Set the modal to edit mode
     setFormData({
       id: item.id, // Load the ID of the selected item
-      idBalita: item.balita,
       TanggalKunjungan: item.tanggal_kunjungan ? new Date(item.tanggal_kunjungan) : null,
       beratbadankg: item.berat_badan.toString().split('.')[0],
       beratbadangram: item.berat_badan.toString().split('.')[1],
@@ -137,6 +137,7 @@ const DataPa = () => {
     setSelectedImunisasi(item.tipe_imunisasi);
     setSelectedVitamin(item.tipe_vitamin);
     setSelectedDokter(item.dokter);
+    setSelectedBalita(item.balita);
     setModalVisible(true);
   };
 
@@ -150,23 +151,8 @@ const DataPa = () => {
       alert('Data berhasil dihapus');
       fetchPerkembanganBalita(); // Memperbarui data setelah penghapusan
     } catch (error) {
-      console.error('Error details:', error);
-
-      // Cek apakah ada response dari server
-      if (error.response) {
-        console.error('Response Data:', error.response.data);
-        console.error('Response Status:', error.response.status);
-        console.error('Response Headers:', error.response.headers);
-      } else if (error.request) {
-        // Request dibuat tapi tidak ada respons dari server
-        console.error('Request Data:', error.request);
-      } else {
-        // Error lain, misalnya kesalahan konfigurasi dalam permintaan
-        console.error('Error Message:', error.message);
-      }
-
-      // Cetak seluruh error object
-      console.error('Full Error:', error);
+      setErrorMessages('Gagal menghapus data balita.');
+      setIsErrorModalVisible(true);
     }
   };
 
@@ -258,21 +244,21 @@ const DataPa = () => {
       const response = await axios.get(`${Config.API_URL}/perkembangan-balita`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-  
+
       const pemeriksaanData = response.data;
-  
+
       // Ambil semua ID balita dari data pemeriksaan
       const balitaIds = pemeriksaanData.map(pemeriksaan => pemeriksaan.balita);
-  
+
       // Fetch data balita berdasarkan ID balita
       const balitaPromises = balitaIds.map(id => axios.get(`${Config.API_URL}/balita/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       }));
-  
+
       // Tunggu semua request selesai
       const balitaResponses = await Promise.all(balitaPromises);
       const balitaData = balitaResponses.map(response => response.data);
-  
+
       // Gabungkan data pemeriksaan balita dengan data balita
       const mergedData = pemeriksaanData.map((pemeriksaan, index) => ({
         ...pemeriksaan,
@@ -281,10 +267,10 @@ const DataPa = () => {
         umur_balita: moment().diff(moment(balitaData[index].tanggal_lahir_balita), 'months'), // Menghitung umur dalam bulan
         createdAt: pemeriksaan.createdAt, // Pastikan createdAt tersedia di data pemeriksaan
       }));
-  
+
       // Urutkan data berdasarkan createdAt dalam urutan menurun (data terbaru di atas)
       mergedData.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  
+
       // --- Logic for PieChart (latest data for each balita) ---
       const uniqueBalitaMap = new Map();
       mergedData.forEach((item) => {
@@ -292,10 +278,10 @@ const DataPa = () => {
           uniqueBalitaMap.set(item.balita, item); // Only keep the latest entry for each balita
         }
       });
-  
+
       // Dapatkan data terbaru untuk setiap balita
       const filteredPemeriksaanDataForPie = Array.from(uniqueBalitaMap.values());
-  
+
       // Menghitung status gizi untuk PieChart
       const giziCounts = {
         buruk: 0,
@@ -304,13 +290,13 @@ const DataPa = () => {
         lebih: 0,
         obesitas: 0,
       };
-  
+
       filteredPemeriksaanDataForPie.forEach(item => {
         if (item.status_gizi in giziCounts) {
           giziCounts[item.status_gizi]++;
         }
       });
-  
+
       // Update giziData berdasarkan hitungan status gizi
       setGiziData([
         { gizi: 'Buruk', banyak: giziCounts.buruk, color: '#FF0000' }, // Merah untuk buruk
@@ -319,27 +305,27 @@ const DataPa = () => {
         { gizi: 'Lebih', banyak: giziCounts.lebih, color: '#FF7F50' }, // Oranye untuk lebih
         { gizi: 'Obesitas', banyak: giziCounts.obesitas, color: '#8B0000' } // Warna gelap untuk obesitas
       ]);
-  
+
       // --- Pagination Logic ---
       const totalItems = mergedData.length; // Total items after merging
       const pageSize = 10; // Set page size
       const totalPages = Math.ceil(totalItems / pageSize); // Calculate total pages
-  
+
       // Set data for the first page (initial page load)
       const paginatedData = mergedData.slice(0, pageSize); // Slice data for the first page
-  
+
       // Set state for FlatList and pagination
       setPerkembangan_balita(mergedData);
       setFilteredData(paginatedData); // Set initial data for FlatList
       setTotalPages(totalPages); // Set total pages for pagination
       setPageNumber(1); // Initialize page number
-  
+
       console.log(mergedData);
     } catch (error) {
-      console.error('Error details:', error);
+
     }
   };
-  
+
 
   const handleNextPage = () => {
     if (pageNumber < totalPages) {
@@ -349,7 +335,7 @@ const DataPa = () => {
       setFilteredData(perkembangan_balita.slice((nextPage - 1) * pageSize, nextPage * pageSize));
     }
   };
-  
+
   // Function to handle previous page
   const handlePreviousPage = () => {
     if (pageNumber > 1) {
@@ -359,7 +345,7 @@ const DataPa = () => {
       setFilteredData(perkembangan_balita.slice((prevPage - 1) * pageSize, prevPage * pageSize));
     }
   };
-  
+
   const handleCardPress = (item) => {
     setSelectedBalitaDetail(item);  // Set data balita yang dipilih
     setDetailModalVisible(true);    // Tampilkan modal detail
@@ -377,23 +363,7 @@ const DataPa = () => {
       }));
       setBalitaItems(formattedBalita);
     } catch (error) {
-      console.error('Error details:', error);
 
-      // Cek apakah ada response dari server
-      if (error.response) {
-        console.error('Response Data:', error.response.data);
-        console.error('Response Status:', error.response.status);
-        console.error('Response Headers:', error.response.headers);
-      } else if (error.request) {
-        // Request dibuat tapi tidak ada respons dari server
-        console.error('Request Data:', error.request);
-      } else {
-        // Error lain, misalnya kesalahan konfigurasi dalam permintaan
-        console.error('Error Message:', error.message);
-      }
-
-      // Cetak seluruh error object
-      console.error('Full Error:', error);
     }
   };
 
@@ -428,23 +398,7 @@ const DataPa = () => {
       }
       setSelectedAntropometri(selectedAntropometri);
     } catch (error) {
-      console.error('Error details:', error);
 
-      // Cek apakah ada response dari server
-      if (error.response) {
-        console.error('Response Data:', error.response.data);
-        console.error('Response Status:', error.response.status);
-        console.error('Response Headers:', error.response.headers);
-      } else if (error.request) {
-        // Request dibuat tapi tidak ada respons dari server
-        console.error('Request Data:', error.request);
-      } else {
-        // Error lain, misalnya kesalahan konfigurasi dalam permintaan
-        console.error('Error Message:', error.message);
-      }
-
-      // Cetak seluruh error object
-      console.error('Full Error:', error);
     }
   };
 
@@ -489,7 +443,9 @@ const DataPa = () => {
       }));
       setDokterItems(formattedDokter);
     } catch (error) {
-      console.error('Error fetching dokter data:', error);
+      setErrorMessages('Gagal Mendapatkan Data Dokter');
+
+      // Tampilkan modal error
     }
   };
 
@@ -530,14 +486,15 @@ const DataPa = () => {
       setModalEditMode(false); // Reset edit mode after saving
       fetchPerkembanganBalita(); // Optionally, refresh the list or perform other actions
     } catch (error) {
-      console.error('Error saving data:', error);
+      setErrorMessages('Gagal Mengupdate Data.');
+      setIsErrorModalVisible(true)
     }
   };
 
 
 
   const tipeImunisasiItems = [
-    { label: 'Tidak ada', value: 'Tidak ada' },
+    { label: 'Tidak ada', value: null },
     { label: 'BCGE', value: 'BCGE' },
     { label: 'Hepatitis B', value: 'Hepatitis B' },
     { label: 'Polio', value: 'Polio' },
@@ -548,7 +505,7 @@ const DataPa = () => {
   ];
 
   const tipeVitaminItems = [
-    { label: 'Tidak ada', value: 'Tidak ada' },
+    { label: 'Tidak ada', value: null },
     { label: 'Vitamin A', value: 'A' },
     { label: 'Cacing', value: 'Cacing' }
   ];
@@ -682,7 +639,7 @@ const DataPa = () => {
           onPress={handlePreviousPage}
           disabled={pageNumber === 1}
         >
-          <Text style={styles.pageButtonText}><Icon name="angle-left" size={30} color="white"/> </Text>
+          <Text style={styles.pageButtonText}><Icon name="angle-left" size={30} color="white" /> </Text>
         </TouchableOpacity>
         <Text style={styles.pageInfo}>
           Page {pageNumber} of {totalPages}
@@ -692,7 +649,7 @@ const DataPa = () => {
           onPress={handleNextPage}
           disabled={pageNumber === totalPages}
         >
-          <Text style={styles.pageButtonText}><Icon name="angle-right" size={30} color="white"/></Text>
+          <Text style={styles.pageButtonText}><Icon name="angle-right" size={30} color="white" /></Text>
         </TouchableOpacity>
       </View>
       {/* Print Modal */}
@@ -700,7 +657,10 @@ const DataPa = () => {
         transparent={true}
         visible={printModalVisible}
         animationType="slide"
-        onRequestClose={() => setPrintModalVisible(false)}
+        onRequestClose={() => {
+          setModalVisible(false);
+          resetForm();  // Reset form when modal is closed
+        }}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
@@ -737,7 +697,10 @@ const DataPa = () => {
         transparent={true}
         visible={modalVisible}
         animationType="slide"
-        onRequestClose={() => setModalVisible(false)}
+        onRequestClose={() => {
+          setModalVisible(false);
+          resetForm();  // Reset form when modal is closed
+        }}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
@@ -837,10 +800,10 @@ const DataPa = () => {
               style={styles.dropdown}
               dropDownContainerStyle={styles.dropdownContainer}
             />
-          <View style={{ marginBottom: 10 ,flexDirection:'row',justifyContent:'space-between'}}>
-            <Text style={{ color: 'black', fontWeight: 'bold' }}>Z-Score: {zScore !== null ? zScore.toFixed(2) : "Belum dihitung"},</Text>
-            <Text style={{ color: 'black', fontWeight: 'bold' }}>Status Gizi: {statusGizi !== null ? statusGizi : "Belum dihitung"}</Text>
-</View>
+            <View style={{ marginBottom: 10, flexDirection: 'row', justifyContent: 'space-between' }}>
+              <Text style={{ color: 'black', fontWeight: 'bold' }}>Z-Score: {zScore !== null ? zScore.toFixed(2) : "Belum dihitung"},</Text>
+              <Text style={{ color: 'black', fontWeight: 'bold' }}>Status Gizi: {statusGizi !== null ? statusGizi : "Belum dihitung"}</Text>
+            </View>
 
 
             <View style={{ marginBottom: 10 }}>
@@ -935,6 +898,11 @@ const DataPa = () => {
           </View>
         </View>
       </Modal>
+      <ErrorModal
+        visible={isErrorModalVisible}
+        message={errorMessages}
+        onClose={() => setIsErrorModalVisible(false)}
+      />
 
     </View>
   )

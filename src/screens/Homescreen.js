@@ -97,7 +97,7 @@ const Homescreen = () => {
       </View>
 
       <View style={Styles.CardHeader}>
-        <Animatable.Text animation="fadeIn" style={Styles.Title}>Jadwal Posyandu</Animatable.Text>
+        <Animatable.Text animation="fadeIn" style={Styles.Title}>Jadwal Kegiatan Hari Ini</Animatable.Text>
         <Animatable.Text animation="fadeIn" style={Styles.SubTitle}>Kamis, 12 Agustus 2022</Animatable.Text>
         <Animatable.Text animation="fadeIn" style={Styles.SubTitle}>Jam Buka : 08.00 - 15.00 WIB</Animatable.Text>
       </View>
@@ -149,7 +149,7 @@ const Homescreen = () => {
               ref={ref => this.babyTextRef = ref}
               style={[Styles.TextPenggunaCard, { color: textColorBalita }]}
             >
-              O
+              5
             </Animatable.Text>
             <Animatable.Text
               ref={ref => this.babyTextRef = ref}
@@ -174,7 +174,7 @@ const Homescreen = () => {
               ref={ref => this.pregnantTextRef = ref}
               style={[Styles.TextPenggunaCard, { color: textColorIbuHamil }]}
             >
-              O
+              3
             </Animatable.Text>
             <Animatable.Text
               ref={ref => this.pregnantTextRef = ref}
@@ -199,7 +199,7 @@ const Homescreen = () => {
               ref={ref => this.grandparentsTextRef = ref}
               style={[Styles.TextPenggunaCard, { color: textColorLansia }]}
             >
-              O
+              10
             </Animatable.Text>
             <Animatable.Text
               ref={ref => this.grandparentsTextRef = ref}
@@ -295,7 +295,7 @@ const Styles = StyleSheet.create({
 
   Title: {
     color: '#fff',
-    fontSize: 30,
+    fontSize: 25,
     fontFamily: 'PlusJakartaSans-Bold'
   },
 

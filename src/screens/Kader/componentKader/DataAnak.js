@@ -1,7 +1,11 @@
-import React from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
+import React,{useState,useEffect} from 'react';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, FlatList ,ActivityIndicator, ScrollView ,Modal, Button } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
+import IconMaterial from 'react-native-vector-icons/MaterialCommunityIcons';
 import { BarChart } from 'react-native-gifted-charts';
+import Config from 'react-native-config';
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import moment from 'moment';
 const imunisasiData = [
     {
@@ -37,33 +41,7 @@ const imunisasiData = [
     // Tambahkan lebih banyak data sesuai kebutuhan
   ];
 
-const renderItem = ({ item }) => (
-    <View style={styles.verificationCard}>
-      <View style={styles.verificationCardContent}>
-        <View style={{ flexDirection: 'column', width: '70%' }}>
-          <Text style={styles.verificationTextTitle}>{item.nama_balita}</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Icon name="user" size={20} color="#16DBCC" />
-            <Text style={styles.verificationText3}>{item.jenis_imunisasi}</Text>
-          </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Icon name="user" size={20} color="#16DBCC" />
-            <Text style={styles.verificationText3}>{item.tanggal_imunisasi}</Text>
-          </View>
-        </View>
-        <View style={{ flexDirection: 'column', justifyContent: 'center' }}>
-          <TouchableOpacity
-            style={[
-              styles.statusButton,
-              item.status === 'Sudah' ? styles.sudah : styles.belum,
-            ]}
-          >
-            <Text style={styles.statusText}>{item.status}</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </View>
-  );
+
   
   const BiodataSection = ({ dataAnak }) => {
     // Menghitung umur
@@ -116,94 +94,238 @@ const renderItem = ({ item }) => (
     );
   };
   
-
-const PASection = () => {
-    const datadummy = [
-      { value: 0.2, label: '0,1 ' ,frontColor: '#4ABFF4',spacing: 0 }, //umur
-      { value: 3,  }, //berat
-      { value: 0.5, label: '0.5 ' ,frontColor: '#4ABFF4',spacing: 0 },
-      { value: 5,  },
-      { value: 1, label: '1 ' ,frontColor: '#4ABFF4',spacing: 0 },
-      { value: 5,  },
-      { value: 1, label: '2' ,frontColor: '#4ABFF4',spacing: 0 },
-      { value: 1.5,  },
-      { value: 3, label: '3', frontColor: '#4ABFF4',spacing: 0 },
-      { value: 4,  },
-      { value: 5, label: '4 kg' ,frontColor: '#4ABFF4',spacing: 0},
-      { value: 5, }  
-    ]
-    return (
-  <View style={styles.dataSection}>
- 
-    <View style={{ marginTop: 20 ,width: '100%'}}>
-      <BarChart
-      labelColor={'#888888'}
-        data={datadummy}
-        barWidth={30}
-        spacing={15}
-        capThickness={4}
-        isAnimated
-       
-        xAxisLabelTextStyle={{  color: '#4ABFF4', }}
-        sideWidth={15}
-       
-        yAxisTextStyle={{color: '#90EE90'}}
-        frontColor={'#90EE90'}
-
-      />
-      <View style={styles.legendContainer}>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendBox, { backgroundColor: '#ADD8E6' }]} />
-          <Text style={styles.legendText}>Umur Balita</Text>
-        </View>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendBox, { backgroundColor: '#90EE90' }]} />
-          <Text style={styles.legendText}>Berat Balita</Text>
-        </View>
-      </View>
-    </View>
-  </View>
+  const PASection = ({ dataAnak }) => {
+    const [paData, setPaData] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
   
-);
-}
-const ImunisasiSection = () => (
-    
-  <View style={styles.dataSection}>
-  {/* Gantikan FlatList dengan View dan manual rendering */}
-  {imunisasiData.map((item) => (
-    <View key={item.id} style={styles.verificationCard}>
-      <View style={styles.verificationCardContent}>
-        <View style={{ flexDirection: 'column', width: '70%' }}>
-          <Text style={styles.verificationTextTitle}>{item.nama_balita}</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Icon name="user" size={20} color="#16DBCC" />
-            <Text style={styles.verificationText3}>{item.jenis_imunisasi}</Text>
-          </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Icon name="calendar" size={20} color="#16DBCC" />
-            <Text style={styles.verificationText3}>{item.tanggal_imunisasi}</Text>
-          </View>
-        </View>
-        <View style={{ flexDirection: 'column', justifyContent: 'center' }}>
-          <TouchableOpacity
-            style={[
-              styles.statusButton,
-              item.status === 'Sudah' ? styles.sudah : styles.belum,
-            ]}
-          >
-            <Text style={styles.statusText}>{item.status}</Text>
-          </TouchableOpacity>
-        </View>
+    useEffect(() => {
+      const fetchData = async () => {
+        try {
+          const token = await AsyncStorage.getItem('token');
+          if (!token) throw new Error('Token is missing');
+  
+          const response = await axios.get(`${Config.API_URL}/perkembangan-balita`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+  
+          // Memfilter data berdasarkan id balita dan menambahkan tanggal lahir ke setiap item
+          const filteredData = response.data
+            .filter(item => item.balita === dataAnak.id)
+            .map(item => ({
+              ...item,
+              tanggal_lahir_balita: dataAnak.tanggal_lahir_balita, // Tambahkan tanggal lahir dari dataAnak ke setiap entri
+            }));
+          
+          setPaData(filteredData);
+          setLoading(false);
+        } catch (err) {
+          setError(err);
+          setLoading(false);
+        }
+      };
+  
+      if (dataAnak && dataAnak.id) {
+        fetchData();
+      }
+    }, [dataAnak]);
+  
+    if (loading) {
+      return <ActivityIndicator size="large" color="#00ff00" />;
+    }
+  
+    if (error) {
+      return <Text style={{ color: 'red' }}>Error: {error.message}</Text>;
+    }
+  
+    if (paData.length === 0) {
+      return <Text>No data available.</Text>;
+    }
+  
+    // Fungsi untuk menghitung umur dalam format desimal
+    const calculateAgeInDecimal = (birthDate, checkupDate) => {
+      const birthMoment = moment(birthDate, 'YYYY-MM-DD'); // Pastikan format tanggal sesuai
+      const checkupMoment = moment(checkupDate, 'YYYY-MM-DD');
+      const years = checkupMoment.diff(birthMoment, 'years'); // Hitung jumlah tahun
+      birthMoment.add(years, 'years'); // Update tanggal lahir setelah menambahkan tahun
+      const months = checkupMoment.diff(birthMoment, 'months'); // Hitung sisa bulan setelah tahun
+  
+      return parseFloat(`${years}.${months}`); // Gabungkan tahun dan bulan dalam format desimal
+    };
+  
+    // Menyiapkan data untuk BarChart
+    const chartData = paData
+      .map(item => ({
+        value: item.berat_badan,
+        label: calculateAgeInDecimal(item.tanggal_lahir_balita, item.tanggal_kunjungan), // Menggunakan format desimal untuk umur
+        frontColor: '#90EE90',
+      }))
+      .sort((a, b) => a.label - b.label); // Urutkan berdasarkan umur desimal
+  
+    return (
+      <View style={styles.dataSection}>
+        <Text style={styles.label}>Perkembangan Balita</Text>
+        <BarChart
+          data={chartData}
+          barWidth={30}
+          spacing={15}
+          capThickness={4}
+          isAnimated
+          xAxisLabelTextStyle={{ color: '#4ABFF4' }}
+          yAxisTextStyle={{ color: '#90EE90' }}
+          frontColor={'#90EE90'}
+        />
       </View>
-    </View>
-  ))}
-</View>
+    );
+  };
+  
+  
+  
+  
+  const KegiatanSection = ({ dataAnak }) => {
+    const [kegiatanData, setKegiatanData] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [modalVisible, setModalVisible] = useState(false); // Untuk mengatur visibilitas modal
+    const [selectedItem, setSelectedItem] = useState(null); // Untuk menyimpan data yang dipilih
+  
+    useEffect(() => {
+      const fetchData = async () => {
+        try {
+          const token = await AsyncStorage.getItem('token');
+          if (!token) throw new Error('Token is missing');
+  
+          const response = await axios.get(`${Config.API_URL}/perkembangan-balita`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+  
+          const filteredData = response.data.filter(item => item.balita === dataAnak.id);
+          setKegiatanData(filteredData);
+          setLoading(false);
+        } catch (err) {
+          setError(err);
+          setLoading(false);
+        }
+      };
+  
+      if (dataAnak && dataAnak.id) {
+        fetchData();
+      }
+    }, [dataAnak]);
+  
+    if (loading) {
+      return <ActivityIndicator size="large" color="#00ff00" />;
+    }
+  
+    if (error) {
+      return <Text style={{ color: 'red' }}>Error: {error.message}</Text>;
+    }
+  
+    if (kegiatanData.length === 0) {
+      return <Text>No data available.</Text>;
+    }
+  
+    const openModal = (item) => {
+      setSelectedItem(item);
+      setModalVisible(true);
+    };
+  
+    const closeModal = () => {
+      setModalVisible(false);
+      setSelectedItem(null);
+    };
+  
+    return (
+      <ScrollView style={styles.dataSection}>
+        {kegiatanData.map((item, index) => (
+          <TouchableOpacity key={index} onPress={() => openModal(item)}>
+            <View style={styles.verificationCardContent}>
+              <View style={{ flexDirection: 'column', width: '70%' }}>
+                <Text style={styles.verificationTextTitle}>Status Gizi: {item.status_gizi}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Icon name="balance-scale" size={20} color="#16DBCC" />
+                  <Text style={styles.verificationText3}>{item.berat_badan} kg</Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Icon name="smile-o" size={20} color="#16DBCC" />
+                  <Text style={styles.verificationText3}>Lingkar Kepala: {item.lingkar_kepala} cm</Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Icon name="calendar" size={20} color="#16DBCC" />
+                  <Text style={styles.verificationText3}>{moment(item.tanggal_kegiatan).format('DD MMMM YYYY')}</Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <IconMaterial name="ruler" size={20} color="#16DBCC" />
+                  <Text style={styles.verificationText3}>Tinggi Badan: {item.tinggi_badan} cm</Text>
+                </View>
+              </View>
+              <View style={{ flexDirection: 'column', marginTop: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <IconMaterial name="needle" size={20} color="#16DBCC" />
+                  <Text style={styles.verificationText3}>{item.tipe_imunisasi}</Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Icon name="medkit" size={20} color="#16DBCC" />
+                  <Text style={styles.verificationText3}>Vitamin {item.tipe_vitamin}</Text>
+                </View>
+              </View>
+            </View>
+          </TouchableOpacity>
+        ))}
+  
+        {/* Modal untuk menampilkan keterangan */}
+        {selectedItem && (
+          <Modal
+            animationType="slide"
+            transparent={true}
+            visible={modalVisible}
+            onRequestClose={closeModal}
+          >
+            <View style={styles.modalContainer}>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Keterangan Kunjungan</Text>
+                <Text style={styles.modalText}>{selectedItem.keterangan}</Text>
+                <Button title="Tutup" onPress={closeModal} />
+              </View>
+            </View>
+          </Modal>
+        )}
+      </ScrollView>
+    );
+  };
+  
 
-);
-
-export { BiodataSection, PASection, ImunisasiSection };
+export { BiodataSection, PASection, KegiatanSection  };
 
 const styles = StyleSheet.create({
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Background transparan dengan overlay gelap
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 10,
+    width: '80%',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontWeight: 'bold',
+    fontSize: 18,
+    color: '#444444',
+    marginBottom: 10,
+  },
+  modalText: {
+    fontSize: 16,
+    marginBottom: 20,
+    color: 'black',
+  },
   dataSection: {
     padding: 15,
     overflow: 'hidden',  
@@ -253,6 +375,7 @@ const styles = StyleSheet.create({
     color: 'black',
     fontFamily: 'Urbanist-Bold',
     marginBottom: 5,
+    marginLeft: 5,
     fontSize: 12,
     flexWrap: 'wrap',
     width: 150
