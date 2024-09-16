@@ -15,6 +15,7 @@ import Register from './src/screens/auth/register/Index';
 import Syarat from './src/screens/auth/register/Syarat';
 
 
+
 import IbuScreen from './src/screens/auth/register/IbuScreen';
 import AyahScreen from './src/screens/auth/register/AyahScreen';
 import LansiaScreen from './src/screens/auth/register/LansiaScreen';
@@ -155,6 +156,7 @@ const App = () => {
         </Stack.Screen>
 
       </Stack.Navigator>
+      
     </NavigationContainer>
   );
 };

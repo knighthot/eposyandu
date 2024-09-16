@@ -1,4 +1,4 @@
-import React from 'react';
+import React,{useEffect, useState} from 'react';
 import { SafeAreaView, StyleSheet, Text, View, TouchableOpacity, Alert, Image} from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -33,6 +33,7 @@ import IbuForm from '../screens/Kader/balita/dataOrangTua/IbuForm';
 import DetailLansia from '../screens/Kader/lansia/dataLansia/DetailLansia.js';
 import DataPemeriksaanLansia from '../screens/Kader/lansia/DataPemeriksaan/DataPemeriksaanLansia.js';
 import profile from '../assets/images/anakcew.png'
+import EditUserAccount from '../screens/Kader/EditUserAccount.js';
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 const Drawer = createDrawerNavigator();
@@ -131,7 +132,22 @@ const TabNavigator = () => {
 // Custom drawer content for adding logout button
 const CustomDrawerContent = (props) => {
   const navigation = useNavigation();
+  const [userName, setUserName] = useState(''); // Tambahkan state untuk userName
 
+  useEffect(() => {
+    const getUserName = async () => {
+      try {
+        const storedUserName = await AsyncStorage.getItem('userName');
+        if (storedUserName) {
+          setUserName(storedUserName); // Simpan userName ke state
+        }
+      } catch (error) {
+        console.error('Error fetching userName:', error);
+      }
+    };
+
+    getUserName();
+  }, []);
   const handleLogout = async () => {
     Alert.alert(
       "Logout",
@@ -169,11 +185,13 @@ const CustomDrawerContent = (props) => {
           source={profile} // Ganti dengan gambar profil yang Anda inginkan
           style={styles.profilePicture}
         />
-        <TouchableOpacity style={styles.editIcon}>
+        <TouchableOpacity style={styles.editIcon} 
+          onPress={() => navigation.navigate('EditUserAccount')}
+        >
           <MaterialCommunityIcons name="pencil" size={20} color="white" />
         </TouchableOpacity>
       </View>
-      <Text style={styles.profileName}>Nama Pengguna</Text>
+      <Text style={styles.profileName}>{userName}</Text>
     </View>
 
     <DrawerItemList {...props} />
@@ -282,6 +300,7 @@ const StackNavigator = () => {
       <Stack.Screen name="DetailWali" component={DetailWali} options={{ headerShown: false }} />
       <Stack.Screen name="DataPemeriksaanLansia" component={DataPemeriksaanLansia} options={{ headerShown: false }} />
       <Stack.Screen name="App" component={App} options={{ headerShown: false }} />
+      <Stack.Screen name="EditUserAccount" component={EditUserAccount} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 };
