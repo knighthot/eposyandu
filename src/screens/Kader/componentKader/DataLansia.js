@@ -1,5 +1,5 @@
 import React,{ useState,useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, FlatList,ScrollView } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, FlatList,ScrollView, Modal } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import moment from 'moment';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -73,7 +73,7 @@ const BiodataLansiaSection = ({ dataLansia }) => {
     };
   
     return (
-      <View style={styles.dataSection}>
+      <View >
         <Text style={styles.label}>Nomor KK</Text>
         <TextInput style={styles.input} value={dataLansia?.no_kk_lansia || ''} editable={false} />
   
@@ -179,7 +179,7 @@ const BiodataWaliSection = ({ dataWali }) => {
   }, [dataWali]);
 
   return (
-    <View style={styles.dataSection}>
+    <View>
       <Text style={styles.label}>Nama Wali</Text>
       <TextInput style={styles.input} value={dataWali?.nama_wali || ''} editable={false} />
 
@@ -241,36 +241,150 @@ const BiodataWaliSection = ({ dataWali }) => {
 };
 
 // Pemeriksaan Lansia Section
-const PemeriksaanLansiaSection = () => {
+const PemeriksaanLansiaSection = ({ dataLansia }) => {
+  const [pemeriksaanData, setPemeriksaanData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedPemeriksaan, setSelectedPemeriksaan] = useState(null);
+  const [dokterName, setDokterName] = useState('');
+  const [kaderName, setKaderName] = useState('');
+
+  const fetchDokterKaderNames = async (dokterId, kaderId) => {
+    const token = await AsyncStorage.getItem('token');
+    try {
+      // Fetch dokter from the dokter route
+      const dokterResponse = await axios.get(`${Config.API_URL}/dokter/${dokterId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+  
+      // Fetch kader from the pengguna route
+      const kaderResponse = await axios.get(`${Config.API_URL}/pengguna/${kaderId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+  
+      // Set dokter and kader names
+      setDokterName(dokterResponse.data.nama || 'Tidak ditemukan');
+      setKaderName(kaderResponse.data.nama || 'Tidak ditemukan');
+    } catch (error) {
+      console.error('Error fetching dokter and kader names:', error);
+    }
+  };
+  
+
+  const handlePress = (item) => {
+    console.log(item);
+    setSelectedPemeriksaan(item);
+    fetchDokterKaderNames(item.dokter, item.kader);
+    setModalVisible(true);
+  };
+
+  
+  useEffect(() => {
+    const fetchPemeriksaanLansia = async () => {
+      const token = await AsyncStorage.getItem('token');
+      try {
+        // Fetch data from pemeriksaan-lansia route
+        const response = await axios.get(`${Config.API_URL}/pemeriksaan-lansia`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        // Filter pemeriksaan data that matches the dataLansia.id
+        const filteredData = response.data.filter((pemeriksaan) => pemeriksaan.lansia === dataLansia.id);
+        setPemeriksaanData(filteredData);
+        
+      } catch (error) {
+        console.error('Error fetching pemeriksaan lansia:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (dataLansia?.id) {
+      fetchPemeriksaanLansia();
+    }
+  }, [dataLansia]);
+
+  if (isLoading) {
+    return <Text>Loading...</Text>;
+  }
+
+  if (pemeriksaanData.length === 0) {
+    return <Text>No pemeriksaan data available for this lansia.</Text>;
+  }
+
   return (
-    <View style={styles.dataSection}>
-      {pemeriksaanLansiaData.map((item) => (
-        <View key={item.id} style={styles.verificationCard}>
-          <View style={styles.verificationCardContent}>
-            <View style={{ flexDirection: 'column', width: '70%' }}>
-              <Text style={styles.verificationTextTitle}>{item.nama_lansia}</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Icon name="calendar" size={20} color="#16DBCC" />
-                <Text style={styles.verificationText3}>Tanggal: {moment(item.tanggal_kunjungan).format('DD MMMM YYYY')}</Text>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Icon name="heartbeat" size={20} color="#16DBCC" />
-                <Text style={styles.verificationText3}>Tekanan Darah: {item.tekanan_darah}</Text>
-              </View>
-            </View>
-            <View style={{ flexDirection: 'column', justifyContent: 'center' }}>
-              <TouchableOpacity
-                style={[styles.statusButton, item.status === 'Normal' ? styles.normal : styles.abnormal]}
-              >
-                <Text style={styles.statusText}>{item.status}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+    <View >
+     {pemeriksaanData.map((item) => (
+  <View key={item.id} style={styles.verificationCard}>
+    <TouchableOpacity 
+      style={styles.verificationCardContent} 
+      onPress={() => handlePress(item)}
+    >
+      <View style={{ flexDirection: 'column', width: '100%' }}>
+        <Text style={styles.verificationTextTitle}>{dataLansia?.nama_lansia}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Icon name="calendar" size={20} color="#16DBCC" />
+          <Text style={styles.verificationText3}>
+            Tanggal: {moment(item.tanggal_pemeriksaan).format('DD MMMM YYYY')}
+          </Text>
         </View>
-      ))}
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 5 }}>
+          <Icon name="transgender" size={20} color="#424F5E" />
+          <Text style={styles.verificationText3}>
+            {item.jenis_kelamin_lansia === 'l' ? 'Laki-Laki' : 'Perempuan'}
+          </Text>
+        </View>
+        <View style={{ marginTop: 5 }}>
+          <Text style={styles.verificationTextTitle}>Ket :</Text>
+          <Text style={styles.verificationText3}>{item.keterangan}</Text>
+        </View>
+      </View>
+    </TouchableOpacity>
+  </View>
+))}
+
+<Modal
+  visible={modalVisible}
+  transparent={true}
+  animationType="slide"
+  onRequestClose={() => setModalVisible(false)}
+>
+  <View style={styles.modalOverlay}>
+    <View style={styles.modalContent}>
+      {selectedPemeriksaan && (
+        <>
+          <Text style={styles.modalTitle}>Detail Pemeriksaan Lansia</Text>
+          <Text style={styles.modalText}>Nama Lansia: {dataLansia.nama_lansia}</Text>
+          <Text style={styles.modalText}>Tanggal Kunjungan: {moment(selectedPemeriksaan.tanggal_pemeriksaan).format('DD MMMM YYYY')}</Text>
+          <Text style={styles.modalText}>Berat Badan: {selectedPemeriksaan.berat_badan}</Text>
+          <Text style={styles.modalText}>Tinggi Badan: {selectedPemeriksaan.tinggi_badan}</Text>
+          <Text style={styles.modalText}>Lingkar Perut: {selectedPemeriksaan.lingkar_perut}</Text>
+          <Text style={styles.modalText}>Tekanan Darah: {selectedPemeriksaan.tekanan_darah}</Text>
+          <Text style={styles.modalText}>Gula Darah: {selectedPemeriksaan.gula_darah}</Text>
+          <Text style={styles.modalText}>Kolestrol: {selectedPemeriksaan.kolestrol}</Text>
+          <Text style={styles.modalText}>Asam Urat: {selectedPemeriksaan.asam_urat}</Text>
+          <Text style={styles.modalText}>Kesehatan Mata: {selectedPemeriksaan.kesehatan_mata}</Text>
+          <Text style={styles.modalText}>Riwayat Obat: {selectedPemeriksaan.riwayat_obat}</Text>
+          <Text style={styles.modalText}>Riwayat Penyakit: {selectedPemeriksaan.riwayat_penyakit}</Text>
+          <Text style={styles.modalText}>Dokter: {dokterName}</Text>
+          <Text style={styles.modalText}>Kader: {kaderName}</Text>
+
+          <TouchableOpacity 
+            style={styles.closeButton}
+            onPress={() => setModalVisible(false)}
+          >
+            <Text style={styles.closeButtonText}>Tutup</Text>
+          </TouchableOpacity>
+        </>
+      )}
+    </View>
+  </View>
+</Modal>
+
     </View>
   );
 };
+
 
 const DataLansiaSection = ({ dataList}) => {
   const [dataLansia, setDataLansia] = useState([]);
@@ -345,6 +459,10 @@ const RenderLansiaItem = ({ item }) => {
             <Icon name="transgender" size={20} color="#424F5E" />
             <Text style={styles.verificationText3}>{item.jenis_kelamin_lansia === 'l' ? 'Laki-Laki' : 'Perempuan'}</Text>
           </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 5 }}>
+            <Icon name="transgender" size={20} color="#424F5E" />
+            <Text style={styles.verificationText3}>{item.jenis_kelamin_lansia === 'l' ? 'Laki-Laki' : 'Perempuan'}</Text>
+          </View>
 
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Text style={styles.verificationText}>{calculateAge(item.tanggal_lahir_lansia)}</Text>
@@ -371,6 +489,41 @@ const styles = StyleSheet.create({
     marginVertical: 10,
     borderRadius: 10,
     elevation: 2,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 10,
+    width: '80%',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    color: 'black',
+  },
+  modalText: {
+    fontSize: 16,
+    marginBottom: 5,
+    color: 'black',
+  },
+  closeButton: {
+    marginTop: 20,
+    padding: 10,
+    backgroundColor: '#008EB3',
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  closeButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   label: {
     fontWeight: 'bold',
@@ -408,6 +561,7 @@ const styles = StyleSheet.create({
     color: 'black',
     fontFamily: 'Urbanist-ExtraBold',
     marginBottom: 2,
+    fontWeight: 'bold',
     flexWrap: 'wrap',
     fontSize: 15,
   },
@@ -417,7 +571,7 @@ const styles = StyleSheet.create({
     marginBottom: 5,
     fontSize: 12,
     flexWrap: 'wrap',
-    width: 150,
+    width: 200,
     marginLeft: 5
   },
   statusButton: {

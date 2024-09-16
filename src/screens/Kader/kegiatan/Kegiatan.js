@@ -126,7 +126,7 @@ const Kegiatan = () => {
         `${Config.API_URL}/kegiatan`,
         {
           nama: formData.nama_kegiatan,
-          tanggal: moment(formData.hari_tanggal, 'dddd, DD MMMM YYYY').toISOString(),
+          tanggal: moment.utc(formData.hari_tanggal, 'dddd, DD MMMM YYYY').toISOString(),
           jenis: formData.jenisKegiatan,
           deskripsi: formData.deskripsi,
         },
@@ -151,9 +151,9 @@ const Kegiatan = () => {
   const handleEditKegiatan = (item) => {
     setSelectedItem(item);
     setFormData({
-      nama_kegiatan: item.nama_kegiatan,
+      nama_kegiatan: item.nama,
       hari_tanggal: moment(item.tanggal_kegiatan).format('dddd, DD MMMM YYYY'),
-      jenisKegiatan: item.jenis_kegiatan,
+      jenisKegiatan: item.jenis,
       deskripsi: item.deskripsi,
     });
     setEditModalVisible(true);
@@ -170,7 +170,7 @@ const Kegiatan = () => {
         `${Config.API_URL}/kegiatan/${selectedItem.id}`,
         {
           nama: formData.nama_kegiatan,
-          tanggal: moment(formData.hari_tanggal, 'dddd, DD MMMM YYYY').toISOString(),
+          tanggal: moment.utc(formData.hari_tanggal, 'dddd, DD MMMM YYYY').toISOString(),
           jenis: formData.jenisKegiatan,
           deskripsi: formData.deskripsi,
         },

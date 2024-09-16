@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import { View, TouchableOpacity, StyleSheet, Modal,Text,FlatList,ScrollView} from 'react-native';
 import * as Animatable from 'react-native-animatable';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
@@ -6,8 +6,8 @@ import Grandparents from '../assets/icons/Grandparents';
 import ListItem from '../components/ListItem';
 import Baby from '../assets/icons/Baby';
 import IbuHamil from '../assets/icons/IbuHamil';
-import {fotoposyandu } from '../data/DataFoto';
-
+import Config from 'react-native-config';
+import axios from 'axios';
 import {useSharedValue} from 'react-native-reanimated';
 
 // Mengatur lokal Indonesia
@@ -21,6 +21,8 @@ LocaleConfig.locales['id'] = {
 LocaleConfig.defaultLocale = 'id';
 
 const Homescreen = () => {
+  const [dokumentasi, setDokumentasi] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
@@ -36,6 +38,22 @@ const Homescreen = () => {
   const onScroll = e => {
     scrollX.value = e.nativeEvent.contentOffset.x;
   };
+
+  useEffect(() => {
+    // Fetch data from dokumentasi API
+    const fetchDokumentasi = async () => {
+      try {
+        const response = await axios.get(`${Config.API_URL}/dokumentasi`);
+        setDokumentasi(response.data);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error fetching dokumentasi:', error);
+        setIsLoading(false);
+      }
+    };
+
+    fetchDokumentasi();
+  }, []);
 
   const activities = {
     Balita: {
@@ -216,27 +234,32 @@ const Homescreen = () => {
         <Text style={Styles.PenggunaTitle}>Dokumentasi</Text>
       </View>
 
-<View style={Styles.GambarContainer}>
-     <FlatList
-     data={fotoposyandu}
-     horizontal
-        style={{margin: 16}}
-        bounces={false}
-        onScroll={onScroll}
-        scrollEventThrottle={18}
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ padding: 0 }} 
-     keyExtractor={item => item.id.toString()}
-     renderItem={({ item, index}) => 
-     <ListItem 
-     path={item.path} 
-     scrollX={scrollX} 
-     index={index}
-     dataLength={fotoposyandu.length}
-     />
-    }
-     />
-  </View>
+      <View style={Styles.GambarContainer}>
+        {isLoading ? (
+          <Text>Loading...</Text>
+        ) : (
+          <FlatList
+          data={dokumentasi}
+          horizontal
+          style={{ margin: 16 }}
+          bounces={false}
+          onScroll={onScroll}
+          scrollEventThrottle={18}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ padding: 0 }} 
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={({ item, index }) => (
+            <ListItem 
+              path={item.foto}  // Use the correct path from your API data
+              scrollX={scrollX}
+              description={item.deskripsi}
+              index={index}
+              dataLength={dokumentasi.length}
+            />
+          )}
+        />
+        )}
+      </View>
 
       <Modal
         animationType="slide"

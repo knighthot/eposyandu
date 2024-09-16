@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, Image, TouchableOpacity, TextInput, Modal, ActivityIndicator, ScrollView } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import Header from '../../../Kader/componentKader/Header';
-import { BiodataLansiaSection, BiodataWaliSection, PemeriksaanLansiaSection } from '../../componentKader/DataLansia';
+import { BiodataLansiaSection, PemeriksaanLansiaSection } from '../../componentKader/DataLansia';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import DropDownPicker from 'react-native-dropdown-picker';
 import DatePicker from 'react-native-date-picker';
@@ -76,7 +76,7 @@ const DetailLansia = ({ route }) => {
       case 'Biodata':
         return <BiodataLansiaSection dataLansia={dataLansia} />;
       case 'Pemeriksaan':
-        return <PemeriksaanLansiaSection />;
+        return <PemeriksaanLansiaSection dataLansia={dataLansia}/>;
       default:
         return null;
     }
